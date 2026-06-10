@@ -1,0 +1,3469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>savi · Campaign Review Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  /* savi brand colours */
+  --teal:        #224B50;
+  --teal-mid:    #2d6068;
+  --teal-light:  #e8f2f3;
+  --teal-border: #b8d4d8;
+  --cyan:        #009999;
+  --cyan-bg:     #e0f5f5;
+  --cyan-border: #80cccc;
+  --green-hi:    #55FEAD;
+  --green-hi-bg: #e8fdf4;
+
+  /* UI */
+  --bg:      #f5f7f7;
+  --surface: #ffffff;
+  --surface2:#eef3f3;
+  --border:  #d8e4e5;
+  --text:    #18160f;
+  --muted:   #5a7070;
+
+  /* status */
+  --green:        #1e7a50;
+  --green-bg:     #e6f4ed;
+  --green-border: #9dd4b8;
+  --amber:        #b86000;
+  --amber-bg:     #fff4e0;
+  --amber-border: #f0c068;
+  --red:          #be1a2c;
+  --red-bg:       #fde8ea;
+  --red-border:   #f0a0a8;
+  --blue:         #2e5fa3;
+  --blue-bg:      #eaf0fb;
+  --blue-border:  #b0c8f0;
+
+  --shadow:    0 1px 12px rgba(34,75,80,0.09);
+  --shadow-md: 0 4px 24px rgba(34,75,80,0.14);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; min-height: 100vh; font-size: 14px; }
+
+/* ── Sidebar ── */
+.shell { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 230px; flex-shrink: 0;
+  background: var(--teal);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0;
+  z-index: 200; overflow-y: auto;
+}
+
+.sidebar-top {
+  padding: 24px 22px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  margin-bottom: 8px;
+}
+
+.logo img { height: 32px; display: block; }
+.logo-sub {
+  font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+  color: rgba(255,255,255,0.4); font-family: 'DM Mono', monospace;
+  margin-top: 6px;
+}
+
+.sidebar-section {
+  padding: 14px 22px 5px;
+  font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase;
+  color: rgba(255,255,255,0.3); font-family: 'DM Mono', monospace;
+}
+
+.nav-btn {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 22px; font-size: 13px; font-weight: 500;
+  color: rgba(255,255,255,0.55); cursor: pointer;
+  transition: all 0.15s; border-left: 3px solid transparent;
+  border: none; background: none; width: 100%; text-align: left;
+  border-left: 3px solid transparent; font-family: 'Poppins', sans-serif;
+}
+.nav-btn:hover { color: white; background: rgba(255,255,255,0.06); }
+.nav-btn.active { color: white; background: rgba(255,255,255,0.1); border-left-color: var(--green-hi); }
+.nav-btn .ni { width: 18px; text-align: center; font-size: 14px; }
+
+.campaign-pill {
+  margin: 3px 12px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+}
+.campaign-pill:hover { background: rgba(255,255,255,0.1); }
+.campaign-pill.active { background: rgba(85,254,173,0.12); border-color: rgba(85,254,173,0.35); }
+.cp-name { font-size: 12px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 128px; }
+.cp-client { font-size: 10px; color: rgba(255,255,255,0.4); }
+.cp-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+.btn-new-campaign {
+  margin: 10px 12px 20px;
+  padding: 9px 14px;
+  background: rgba(85,254,173,0.1);
+  border: 1px dashed rgba(85,254,173,0.4);
+  border-radius: 8px;
+  color: var(--green-hi);
+  font-size: 12px; font-weight: 600; font-family: 'Poppins', sans-serif;
+  cursor: pointer; transition: all 0.15s; width: calc(100% - 24px); text-align: center;
+}
+.btn-new-campaign:hover { background: rgba(85,254,173,0.18); }
+
+/* ── Main ── */
+.main { margin-left: 230px; flex: 1; min-height: 100vh; }
+
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 1px 0 rgba(34,75,80,0.06);
+}
+.topbar-title { font-size: 17px; font-weight: 600; color: var(--teal); letter-spacing: -0.3px; }
+.topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+.content { padding: 32px 40px; max-width: 1000px; }
+
+/* ── Screens ── */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ── Dashboard ── */
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 18px; margin-top: 8px; }
+
+.campaign-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 22px;
+  cursor: pointer; transition: all 0.18s; box-shadow: var(--shadow);
+  border-top: 3px solid var(--border);
+}
+.campaign-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.campaign-card.active-campaign { border-top-color: var(--cyan); }
+
+.cc-client { font-size: 11px; color: var(--cyan); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; margin-bottom: 4px; font-family: 'DM Mono', monospace; }
+.cc-name { font-size: 19px; font-weight: 700; margin-bottom: 5px; color: var(--teal); letter-spacing: -0.3px; }
+.cc-offer { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+.cc-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+.cc-chip { font-size: 10px; background: var(--teal-light); border: 1px solid var(--teal-border); padding: 3px 9px; border-radius: 20px; color: var(--teal); font-family: 'DM Mono', monospace; font-weight: 500; }
+.cc-progress { margin-top: 14px; }
+.cc-prog-bar { background: var(--teal-light); border-radius: 99px; height: 5px; margin-top: 5px; overflow: hidden; }
+.cc-prog-fill { height: 100%; border-radius: 99px; background: var(--cyan); }
+.cc-prog-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+.new-card {
+  background: transparent; border: 2px dashed var(--teal-border);
+  border-radius: 12px; padding: 22px;
+  cursor: pointer; transition: all 0.18s;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 160px; gap: 8px; color: var(--muted);
+}
+.new-card:hover { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-bg); }
+.new-card-icon { font-size: 28px; }
+.new-card-label { font-size: 13px; font-weight: 600; }
+
+/* ── Forms ── */
+.form-section { margin-bottom: 28px; }
+.form-section-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--cyan); font-family: 'DM Mono', monospace;
+  margin-bottom: 16px; padding-bottom: 10px;
+  border-bottom: 2px solid var(--teal-light);
+}
+
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 16px; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 11px; font-weight: 600; color: var(--teal); text-transform: uppercase; letter-spacing: 0.5px; }
+.field input, .field select, .field textarea {
+  background: var(--surface2); border: 1.5px solid var(--teal-border);
+  border-radius: 8px; color: var(--text); font-family: 'Poppins', sans-serif;
+  font-size: 14px; padding: 9px 12px; outline: none; transition: border-color 0.2s; width: 100%;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--cyan); }
+.field textarea { resize: vertical; min-height: 76px; }
+
+/* Targets table */
+.targets-table { width: 100%; border-collapse: collapse; }
+.targets-table th { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--cyan); font-family: 'DM Mono', monospace; padding: 8px 12px; text-align: left; border-bottom: 2px solid var(--teal-light); }
+.targets-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.targets-table tr:last-child td { border-bottom: none; }
+.targets-table input { background: var(--surface2); border: 1.5px solid var(--teal-border); border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; padding: 7px 10px; outline: none; width: 130px; transition: border-color 0.2s; }
+.targets-table input:focus { border-color: var(--cyan); }
+.metric-tag { font-size: 12px; font-weight: 600; color: var(--teal); }
+.metric-sub { font-size: 11px; color: var(--muted); }
+.weekly-calc-cell { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--teal); font-weight: 600; padding: 7px 10px; background: var(--teal-light); border: 1px solid var(--teal-border); border-radius: 6px; display: inline-block; min-width: 100px; text-align: center; }
+
+/* ── Buttons ── */
+.btn { display: inline-flex; align-items: center; gap: 7px; border: none; border-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 600; padding: 10px 20px; cursor: pointer; transition: all 0.15s; text-decoration: none; }
+.btn-primary { background: var(--teal); color: white; }
+.btn-primary:hover { background: var(--teal-mid); }
+.btn-accent { background: var(--cyan); color: white; }
+.btn-accent:hover { opacity: 0.88; }
+.btn-outline { background: transparent; border: 1.5px solid var(--teal-border); color: var(--teal); }
+.btn-outline:hover { border-color: var(--teal); background: var(--teal-light); }
+.btn-ghost { background: transparent; color: var(--muted); border: none; }
+.btn-ghost:hover { color: var(--teal); }
+.btn-danger { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+.btn-sm { font-size: 12px; padding: 7px 14px; }
+.btn-xs { font-size: 11px; padding: 5px 10px; }
+.btn-green { background: var(--green-hi); color: var(--teal); }
+.btn-green:hover { opacity: 0.88; }
+
+/* ── Weekly entry ── */
+.week-entry-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 14px; margin-bottom: 20px; }
+
+.week-stat-box { background: var(--surface); border: 1px solid var(--teal-border); border-radius: 10px; padding: 16px; box-shadow: var(--shadow); }
+.wsb-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--cyan); font-family: 'DM Mono', monospace; margin-bottom: 10px; }
+.wsb-inputs { display: flex; flex-direction: column; gap: 8px; }
+.wsb-row { display: flex; align-items: center; gap: 8px; }
+.wsb-sublabel { font-size: 11px; color: var(--muted); width: 80px; flex-shrink: 0; font-weight: 500; }
+.wsb-input { flex: 1; background: var(--surface2); border: 1.5px solid var(--teal-border); border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; padding: 7px 10px; outline: none; transition: border-color 0.2s; }
+.wsb-input:focus { border-color: var(--cyan); }
+.wsb-target { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--teal); background: var(--teal-light); padding: 7px 10px; border-radius: 6px; border: 1px solid var(--teal-border); text-align: center; }
+
+/* ── Analysis ── */
+.rag-strip { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+.rag-tile { background: var(--surface); border: 1px solid var(--teal-border); border-radius: 10px; padding: 12px 18px; text-align: center; box-shadow: var(--shadow); }
+.rag-tile-big { font-size: 30px; font-weight: 700; line-height: 1; color: var(--teal); }
+.rag-tile-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-family: 'DM Mono', monospace; margin-top: 3px; }
+.rag-tile.green .rag-tile-big { color: var(--green); }
+.rag-tile.amber .rag-tile-big { color: var(--amber); }
+.rag-tile.red   .rag-tile-big { color: var(--red); }
+
+.mcard { border: 1px solid var(--teal-border); border-radius: 10px; overflow: hidden; margin-bottom: 14px; box-shadow: var(--shadow); }
+.mcard.green { border-left: 4px solid var(--green); }
+.mcard.amber { border-left: 4px solid var(--amber); }
+.mcard.red   { border-left: 4px solid var(--red); }
+.mcard-head { padding: 14px 18px; background: var(--surface); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; cursor: pointer; }
+.mcard-head:hover { background: var(--teal-light); }
+.mcard-body { padding: 16px 18px; background: var(--surface2); border-top: 1px solid var(--border); display: none; }
+.mcard-body.open { display: block; }
+
+.mname { font-size: 14px; font-weight: 600; color: var(--teal); }
+.mdesc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.stat-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.stat-b { text-align: right; }
+.stat-v { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--teal); }
+.stat-l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-family: 'DM Mono', monospace; }
+
+.pchip { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 5px; }
+.pchip-green { background: var(--green-bg);  color: var(--green); }
+.pchip-amber { background: var(--amber-bg);  color: var(--amber); }
+.pchip-red   { background: var(--red-bg);    color: var(--red); }
+.pchip-blue  { background: var(--blue-bg);   color: var(--blue); }
+
+.rag-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; border: 1px solid; }
+.rb-green { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+.rb-amber { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+.rb-red   { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border); }
+.rb-none  { background: var(--surface2); color: var(--muted);  border-color: var(--border); }
+
+.prog-row { margin-bottom: 8px; }
+.prog-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 3px; }
+.prog-track { background: var(--teal-light); border-radius: 99px; height: 7px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+.pf-green { background: var(--green); } .pf-amber { background: var(--amber); } .pf-red { background: var(--red); } .pf-blue { background: var(--blue); }
+
+.action-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 7px; background: var(--surface); border: 1.5px solid transparent; margin-bottom: 7px; cursor: pointer; transition: all 0.13s; }
+.action-item:hover { border-color: var(--teal-border); }
+.action-item.sel { border-color: var(--teal); background: var(--teal-light); }
+.action-item.sel .acheck { background: var(--teal); border-color: var(--teal); color: white; }
+.acheck { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--teal-border); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; margin-top: 1px; transition: all 0.13s; color: transparent; }
+.atext { font-size: 13px; line-height: 1.5; flex: 1; color: var(--text); }
+.ppip { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; font-family: 'DM Mono', monospace; margin-top: 2px; }
+.pp-urgent { background: var(--red-bg); color: var(--red); }
+.pp-soon   { background: var(--amber-bg); color: var(--amber); }
+.pp-monitor{ background: var(--teal-light); color: var(--teal); border: 1px solid var(--teal-border); }
+
+.act-heading { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--cyan); font-family: 'DM Mono', monospace; margin-bottom: 10px; }
+
+.notes-area { width: 100%; background: var(--surface2); border: 1.5px solid var(--teal-border); border-radius: 7px; font-family: 'Poppins', sans-serif; font-size: 13px; color: var(--text); padding: 10px 12px; resize: vertical; min-height: 56px; outline: none; transition: border-color 0.2s; }
+.notes-area:focus { border-color: var(--cyan); }
+
+/* ── Trends ── */
+.trend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 16px; }
+.trend-card { background: var(--surface); border: 1px solid var(--teal-border); border-radius: 10px; padding: 18px; box-shadow: var(--shadow); }
+.trend-title { font-size: 12px; font-weight: 700; color: var(--teal); margin-bottom: 2px; }
+.trend-sub { font-size: 10px; color: var(--muted); margin-bottom: 10px; }
+
+/* ── History ── */
+.history-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--teal-border); background: var(--surface); margin-bottom: 8px; flex-wrap: wrap; gap: 8px; transition: border-color 0.15s; }
+.history-row:hover { border-color: var(--cyan); }
+.hw { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+.hpills { display: flex; gap: 5px; flex-wrap: wrap; }
+
+/* ── Cards ── */
+.card { background: var(--surface); border: 1px solid var(--teal-border); border-radius: 12px; padding: 28px; margin-bottom: 20px; box-shadow: var(--shadow); }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; flex-wrap: wrap; gap: 10px; }
+.card-title { font-size: 16px; font-weight: 700; color: var(--teal); letter-spacing: -0.3px; }
+
+/* ── Steps ── */
+.step-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 28px; flex-wrap: wrap; }
+.step-item { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--teal-light); border: 1.5px solid var(--teal-border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--teal); }
+.step-item.act { color: var(--teal); font-weight: 600; }
+.step-item.act .step-num { background: var(--teal); color: white; border-color: var(--teal); }
+.step-item.done .step-num { background: var(--green); color: white; border-color: var(--green); }
+.step-item.done { color: var(--green); }
+.step-arr { color: var(--teal-border); font-size: 18px; }
+
+/* ── Modal ── */
+.overlay { position: fixed; inset: 0; background: rgba(34,75,80,0.45); z-index: 500; display: none; align-items: center; justify-content: center; }
+.overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: 14px; padding: 32px; width: 420px; max-width: 95vw; box-shadow: var(--shadow-md); }
+.modal-title { font-size: 20px; font-weight: 700; color: var(--teal); margin-bottom: 6px; }
+.modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+/* ── Toast ── */
+.toast { position: fixed; bottom: 28px; right: 28px; background: var(--teal); color: white; padding: 11px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; transform: translateY(70px); opacity: 0; transition: all 0.25s; z-index: 9999; }
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── Misc ── */
+hr.div { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-icon { font-size: 36px; margin-bottom: 10px; }
+.empty-title { font-size: 20px; font-weight: 700; color: var(--teal); margin-bottom: 6px; }
+.tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; font-family: 'DM Mono', monospace; padding: 3px 8px; border-radius: 4px; background: var(--teal-light); color: var(--teal); border: 1px solid var(--teal-border); }
+.section-label { font-size: 10px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--cyan); font-family: 'DM Mono', monospace; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid var(--teal-light); }
+
+@media(max-width:768px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .content { padding: 20px 16px; }
+  .week-entry-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══ SIDEBAR ═══════════════════════════════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-top">
+    <div class="logo"><img src="https://saviuk-co-uk.nimbus-cdn.uk/wp-content/uploads/2023/06/savi_logotype_white_rgb.svg" alt="savi" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span style="display:none;font-family:Poppins,sans-serif;font-size:22px;font-weight:700;color:white;letter-spacing:-0.5px;">savi</span></div>
+    <div class="logo-sub">Campaign Review Tool</div>
+  </div>
+
+  <div class="sidebar-section">Navigation</div>
+  <button class="nav-btn active" onclick="goScreen('dashboard')"><span class="ni">⊞</span> Dashboard</button>
+
+  <div class="sidebar-section" style="margin-top:8px;">Campaigns</div>
+  <div id="sidebar-campaigns"></div>
+  <button class="btn-new-campaign" onclick="openNewCampaign()">+ New Campaign</button>
+</nav>
+
+<!-- ═══ MAIN ══════════════════════════════════════════ -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-actions" id="topbar-actions">
+      <span id="sync-status" style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;"></span>
+      <button class="btn btn-outline btn-sm" onclick="openSheetsSettings()" title="Connect Google Sheets" style="font-size:11px;">⚙ Connect Sheets</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── DASHBOARD ────────────────────────────────── -->
+    <div class="screen active" id="screen-dashboard">
+      <div id="dashboard-content"></div>
+    </div>
+
+    <!-- ── CAMPAIGN SETUP ────────────────────────────── -->
+    <div class="screen" id="screen-setup">
+      <div class="form-section">
+        <div class="form-section-title">Campaign Details <span style="font-size:10px;color:var(--red);font-family:'DM Mono',monospace;letter-spacing:0;">* required</span></div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Solution <span style="color:var(--red);">*</span></label>
+            <select id="s-solution" onchange="onSolutionChange()">
+              <option value="">— Select solution —</option>
+              <option value="mobile">Solution 1 — Mobile</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Package <span style="color:var(--red);">*</span></label>
+            <select id="s-package" onchange="onPackageChange()">
+              <option value="">— Select package —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Campaign Name <span style="color:var(--red);">*</span></label>
+            <input type="text" id="s-name" placeholder="e.g. Summer Cashback 2025">
+          </div>
+          <div class="field">
+            <label>Client <span style="color:var(--red);">*</span></label>
+            <input type="text" id="s-client" placeholder="e.g. Unilever">
+          </div>
+          <div class="field">
+            <label>Offer Name <span style="color:var(--red);">*</span></label>
+            <input type="text" id="s-offer" placeholder="e.g. £1 off Marmite 250g">
+          </div>
+          <div class="field">
+            <label>Participating Retailers <span style="color:var(--red);">*</span></label>
+            <input type="text" id="s-retailers" placeholder="e.g. Tesco, Co-op">
+          </div>
+          <div class="field">
+            <label>Offer Value Type</label>
+            <select id="s-offer-type" onchange="document.getElementById('s-offer-value-wrap').style.display=this.value?'block':'none'">
+              <option value="">— Not fixed value —</option>
+              <option value="fixed">Fixed value (e.g. £1.00 off)</option>
+              <option value="pct">Percentage off (e.g. 10%)</option>
+            </select>
+          </div>
+          <div class="field" id="s-offer-value-wrap" style="display:none;">
+            <label>Offer Value</label>
+            <input type="number" id="s-offer-value" placeholder="e.g. 1.00" step="0.01" min="0">
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;" id="s-offer-value-hint">Enter amount in £</div>
+          </div>
+          <div class="field">
+            <label>Campaign Start Date <span style="color:var(--red);">*</span></label>
+            <input type="date" id="s-start" oninput="recalcDates()">
+          </div>
+          <div class="field">
+            <label>Campaign End Date <span style="color:var(--red);">*</span></label>
+            <input type="date" id="s-end" oninput="recalcDates()">
+          </div>
+          <div class="field">
+            <label>Total Weeks Live</label>
+            <div id="s-weeks-display" style="background:var(--teal-light);border:1.5px solid var(--teal-border);border-radius:8px;padding:9px 12px;font-family:'DM Mono',monospace;font-size:14px;color:var(--teal);font-weight:600;">—</div>
+            <input type="hidden" id="s-weeks">
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">Auto-calculated from dates</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Optimisation Settings</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Optimisation Model <span style="color:var(--red);">*</span></label>
+            <select id="s-opt-model" onchange="onOptModelChange()">
+              <option value="">— Select model —</option>
+              <option value="paid">Paid Optimisation — agency provides weekly suggestions</option>
+              <option value="unpaid">Unpaid — one mid-campaign review only</option>
+            </select>
+          </div>
+          <div class="field" id="s-opt-review-wrap" style="display:none;">
+            <label>Mid-Campaign Review Date</label>
+            <input type="date" id="s-opt-review-date">
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">Optimisation fields only unlock during this week</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Campaign Objective <span style="color:var(--red);">*</span></div>
+        <div class="field">
+          <textarea id="s-objective" placeholder="Describe the campaign goal — e.g. Drive trial of new Marmite variant through cashback mechanic targeting existing Tesco Clubcard shoppers…"></textarea>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Overall Campaign Targets</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Enter the total targets for the full campaign. Weekly targets will be calculated automatically (overall ÷ total weeks).</p>
+        <table class="targets-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Overall Target</th>
+              <th>Weekly Target (auto)</th>
+            </tr>
+          </thead>
+          <tbody id="setup-targets-body"></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveCampaign()">Save Campaign →</button>
+        <button class="btn btn-outline" onclick="goScreen('dashboard')">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="delete-campaign-btn" onclick="deleteCampaign()" style="display:none;margin-left:auto;">Delete Campaign</button>
+      </div>
+    </div>
+
+    <!-- ── WEEKLY ENTRY ──────────────────────────────── -->
+    <div class="screen" id="screen-weekly">
+      <div class="step-bar">
+        <div class="step-item act"><div class="step-num">1</div> Weekly Data</div>
+        <div class="step-arr">›</div>
+        <div class="step-item" id="ws2"><div class="step-num">2</div> Analysis</div>
+        <div class="step-arr">›</div>
+        <div class="step-item" id="ws3"><div class="step-num">3</div> Export</div>
+      </div>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px;align-items:flex-end;">
+        <div class="field" style="min-width:160px;">
+          <label>Week Commencing</label>
+          <input type="date" id="w-date" oninput="onWeekDateChange()">
+        </div>
+        <div class="field" style="min-width:110px;">
+          <label>Campaign Week #</label>
+          <div id="w-weeknum-display" style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:8px;padding:9px 12px;font-family:'DM Mono',monospace;font-size:14px;color:var(--green);font-weight:600;min-height:40px;">—</div>
+          <input type="hidden" id="w-weeknum" value="">
+        </div>
+        <div class="field" style="min-width:200px;">
+          <label>Internal Notes</label>
+          <input type="text" id="w-notes" placeholder="Media changes, issues, context…">
+        </div>
+      </div>
+
+      <div class="week-entry-grid" id="weekly-metric-inputs"></div>
+
+      <!-- Save button first -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center;">
+        <button class="btn btn-primary" onclick="saveWeekData()">💾 Save Week</button>
+        <span id="save-week-status" style="font-size:12px;color:var(--muted);"></span>
+      </div>
+
+      <!-- Weekly RAG summary — appears after saving -->
+      <div id="weekly-rag-summary" style="margin-top:20px;"></div>
+
+      <!-- Overall targets / campaign stats table -->
+      <div id="overall-targets-table" style="margin-top:20px;"></div>
+    </div>
+
+    <!-- ── ANALYSIS ──────────────────────────────────── -->
+    <div class="screen" id="screen-analysis">
+      <div class="step-bar">
+        <div class="step-item done"><div class="step-num">✓</div> Weekly Data</div>
+        <div class="step-arr">›</div>
+        <div class="step-item act" id="ws2b"><div class="step-num">2</div> Analysis</div>
+        <div class="step-arr">›</div>
+        <div class="step-item" id="ws3b"><div class="step-num">3</div> Export</div>
+      </div>
+
+      <div class="rag-strip" id="rag-strip"></div>
+
+      <!-- RAG Legend -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding:10px 14px;background:var(--surface);border:1px solid var(--teal-border);border-radius:8px;align-items:center;">
+        <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;margin-right:4px;">RAG Key</span>
+        <span class="rag-badge rb-green">🟢 On Track — 76–115%</span>
+        <span class="rag-badge rb-amber">🟡 Needs Attention — 51–75%</span>
+        <span class="rag-badge rb-red">🔴 Off Track — 0–50%</span>
+        <span class="rag-badge rb-amber">🟡 Over Target — 116%+</span>
+      </div>
+
+      <!-- Overall campaign progress — internal only -->
+      <div id="overall-progress-section" style="display:none;"></div>
+      <div id="analysis-cards"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+        <button class="btn btn-outline" onclick="goScreen('weekly')">← Edit Data</button>
+        <button class="btn btn-accent" onclick="goExport()">Prepare Client Export →</button>
+      </div>
+    </div>
+
+    <!-- ── EXPORT ────────────────────────────────────── -->
+    <div class="screen" id="screen-export">
+      <div class="step-bar">
+        <div class="step-item done"><div class="step-num">✓</div> Weekly Data</div>
+        <div class="step-arr">›</div>
+        <div class="step-item done"><div class="step-num">✓</div> Analysis</div>
+        <div class="step-arr">›</div>
+        <div class="step-item act"><div class="step-num">3</div> Export</div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn btn-outline" onclick="goScreen('analysis')">← Back</button>
+        <button class="btn btn-primary" onclick="downloadPDF()">⬇ Download PDF</button>
+        <button class="btn btn-outline" onclick="downloadExcel()" style="border-color:#1e7a50;color:#1e7a50;">⬇ Download Excel</button>
+      </div>
+
+      <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:36px 40px;">
+        <div id="export-preview"></div>
+      </div>
+    </div>
+
+    <!-- ── HISTORY ───────────────────────────────────── -->
+    <div class="screen" id="screen-history">
+      <div id="history-content"></div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- New Campaign Modal -->
+<div class="overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title">New Campaign</div>
+    <div class="modal-sub">Give it a name to get started — you can add all the details on the next screen.</div>
+    <div class="field" style="margin-bottom:20px;">
+      <label>Campaign Name</label>
+      <input type="text" id="modal-name" placeholder="e.g. Summer Cashback 2025" onkeydown="if(event.key==='Enter')createCampaignFromModal()">
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" onclick="createCampaignFromModal()">Create →</button>
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Google Sheets Settings Modal -->
+<div class="overlay" id="sheets-modal" onclick="closeSheetsModal(event)">
+  <div class="modal" style="width:500px;max-width:95vw;">
+    <div class="modal-title">Connect Google Sheets</div>
+    <div class="modal-sub">This lets your whole team share campaign data from one link — for free, no plan upgrade needed.</div>
+
+    <div style="background:var(--teal-light);border:1px solid var(--teal-border);border-radius:8px;padding:14px;margin-bottom:20px;font-size:13px;line-height:1.7;color:var(--teal);">
+      <b>Setup steps (one time only):</b><br>
+      1. Open a new <a href="https://sheets.google.com" target="_blank" style="color:var(--cyan);">Google Sheet</a><br>
+      2. Click <b>Extensions → Apps Script</b><br>
+      3. Delete any existing code and paste the Apps Script code (download below)<br>
+      4. Click <b>Deploy → New Deployment</b><br>
+      5. Type = <b>Web App</b> · Execute as = <b>Me</b> · Access = <b>Anyone</b><br>
+      6. Click <b>Deploy</b> and copy the URL<br>
+      7. Paste it below and click Save
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <a href="#" onclick="downloadAppsScript()" style="display:inline-flex;align-items:center;gap:6px;background:var(--teal-light);border:1px solid var(--teal-border);color:var(--teal);padding:8px 14px;border-radius:7px;font-size:13px;font-weight:600;text-decoration:none;">
+        ⬇ Download Apps Script Code
+      </a>
+    </div>
+
+    <div class="field" style="margin-bottom:20px;">
+      <label>Your Web App URL</label>
+      <input type="text" id="sheets-url-input" placeholder="https://script.google.com/macros/s/…/exec" style="font-size:12px;">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Paste the URL from step 6 above</div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button class="btn btn-primary" onclick="saveSheetsUrl()">Save & Connect</button>
+      <button class="btn btn-outline" onclick="closeSheetsModal()">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="clearSheetsUrl()" style="margin-left:auto;">Disconnect</button>
+    </div>
+    <div id="sheets-test-status" style="margin-top:10px;font-size:12px;"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA MODEL
+// ═══════════════════════════════════════════════════════════════
+const METRICS_DEF = [
+  { id:'req', name:'Coupons Requested', desc:'Top-of-funnel sign-ups', isRatio:false,
+    actions:{ green:[
+      {t:'Maintain current media spend and targeting — performing to weekly plan.',p:'monitor'},
+      {t:'Document what\'s working this week for future campaign briefs.',p:'monitor'}
+    ], amber:[
+      {t:'Review media targeting — are you reaching the right audience segments?',p:'soon'},
+      {t:'A/B test the landing page headline or hero image to lift sign-up conversion.',p:'soon'},
+      {t:'Check offer clarity — is the value proposition strong enough?',p:'soon'},
+      {t:'Consider increasing media frequency or broadening reach.',p:'monitor'}
+    ], red:[
+      {t:'Check media spend is live and targeting is correctly set up immediately.',p:'urgent'},
+      {t:'Audit landing page for technical issues (load speed, mobile UX, broken links).',p:'urgent'},
+      {t:'Escalate to media agency for immediate plan review.',p:'urgent'},
+      {t:'Consider refreshing creative — existing ads may have fatigued.',p:'soon'},
+      {t:'Review retailer stock availability — low stock may be deterring sign-ups.',p:'soon'}
+    ]}
+  },
+  { id:'act', name:'Coupons Activated', desc:'Mid-funnel — completed activations', isRatio:false,
+    actions:{ green:[
+      {t:'Activation flow working well — no changes needed this week.',p:'monitor'},
+      {t:'Capture what\'s driving strong activation for future briefs.',p:'monitor'}
+    ], amber:[
+      {t:'Send reminder to consumers who requested but haven\'t yet activated.',p:'soon'},
+      {t:'Check email deliverability — test for spam folder routing.',p:'soon'},
+      {t:'Review activation journey for unnecessary friction or steps.',p:'soon'},
+      {t:'Test a new subject line or CTA to improve open and click rates.',p:'monitor'}
+    ], red:[
+      {t:'Send immediate re-engagement to all unactivated consumers.',p:'urgent'},
+      {t:'Test activation journey end-to-end — check for technical failures.',p:'urgent'},
+      {t:'Audit email deliverability — high bounce rates will kill activation.',p:'urgent'},
+      {t:'Simplify activation steps — reduce to single-click if possible.',p:'soon'},
+      {t:'Flag to client — activation shortfall will directly impact redemptions.',p:'soon'}
+    ]}
+  },
+  { id:'red', name:'Coupons Redeemed', desc:'Core KPI — in-store redemptions', isRatio:false,
+    actions:{ green:[
+      {t:'Redemption on track vs weekly plan — continue monitoring.',p:'monitor'},
+      {t:'Capture redemption data by retailer to identify volume drivers.',p:'monitor'}
+    ], amber:[
+      {t:'Send "reminder to redeem" to activated but unredeemed consumers.',p:'soon'},
+      {t:'Check redemption expiry dates — ensure consumers have enough time.',p:'soon'},
+      {t:'Confirm product in stock and correctly ranged at participating retailers.',p:'soon'},
+      {t:'Check in-store visibility — is POS material correctly in place?',p:'monitor'}
+    ], red:[
+      {t:'Send urgent re-engagement to all activated but unredeemed consumers now.',p:'urgent'},
+      {t:'Verify stop processing dates are correctly set — no accidental blocks.',p:'urgent'},
+      {t:'Check product availability at participating retailers immediately.',p:'urgent'},
+      {t:'Escalate to client — redemption shortfall directly impacts P&L.',p:'urgent'},
+      {t:'Consider extending campaign end date if redemption window is too tight.',p:'soon'},
+      {t:'Verify barcodes are correctly extended for all participating retailers.',p:'soon'}
+    ]}
+  },
+  { id:'atr', name:'Activation → Redemption %', desc:'Conversion from activated to redeemed', isRatio:true,
+    actions:{ green:[
+      {t:'Conversion rate healthy — the post-activation journey is working.',p:'monitor'},
+      {t:'Benchmark this setup as a reference for future campaigns.',p:'monitor'}
+    ], amber:[
+      {t:'Review post-activation comms sequence — frequency and timing may need adjusting.',p:'soon'},
+      {t:'Check time between activation and expiry — consumers may need more time.',p:'soon'},
+      {t:'Audit in-store visibility at key retailers.',p:'soon'}
+    ], red:[
+      {t:'Review full post-activation journey for technical or UX issues immediately.',p:'urgent'},
+      {t:'Send targeted re-engagement to all activated consumers urgently.',p:'urgent'},
+      {t:'Check redemption mechanic is working correctly at POS.',p:'urgent'},
+      {t:'Review retailer compliance — confirm all agreed retailers accepting the coupon.',p:'soon'},
+      {t:'Consider urgency incentive to drive redemption (e.g. "offer expires soon" message).',p:'soon'}
+    ]}
+  }
+];
+
+let state = { campaigns: {}, activeCampaignId: null, weeklyEntry: null, selectedActions: {}, weeklyDraft: {} };
+
+// ── Google Sheets storage backend ────────────────────────────────
+// Paste your Google Apps Script Web App URL below after setup
+const SHEETS_URL = ''; // ← PASTE YOUR WEB APP URL HERE
+
+const LOCAL_KEY = 'savi-campaign-review-data';
+
+function setSyncStatus(msg, colour) {
+  const el = document.getElementById('sync-status');
+  if(el) { el.textContent = msg; el.style.color = colour || 'var(--muted)'; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CAMPAIGN PACKAGES & METRICS DEFINITIONS
+// ═══════════════════════════════════════════════════════════════
+const PACKAGES = {
+  mobile: {
+    label: 'Solution 1 — Mobile',
+    packages: {
+      basic: {
+        label: 'Basic',
+        metrics: [
+          // fixed=true: always shown, always RAG'd
+          // fixed=false: optional, shown by default (defaultOn:true)
+          // displayOnly=true: auto-calculated, shown but no target/RAG
+          { id:'act',     name:'Coupons Activated',          isRatio:false, auto:false,     fixed:true,  displayOnly:false, desc:'Consumers who activated a coupon' },
+          { id:'red',     name:'Coupons Redeemed',           isRatio:false, auto:false,     fixed:true,  displayOnly:false, desc:'In-store redemptions' },
+          { id:'pending', name:'Coupons Pending Redemption', isRatio:false, auto:'act-red', fixed:true,  displayOnly:true,  desc:'Activated minus redeemed (auto)' },
+          { id:'redval',  name:'Redeemed Value',             isRatio:false, auto:'redval',  fixed:false, displayOnly:true,  defaultOn:true, desc:'Total value redeemed (auto if offer value set)' },
+        ]
+      },
+      intermediate: {
+        label: 'Intermediate',
+        metrics: [
+          { id:'issued',  name:'Coupons Issued',             isRatio:false, auto:false,     fixed:true,  displayOnly:false, desc:'Total coupons issued' },
+          { id:'act',     name:'Coupons Activated',          isRatio:false, auto:false,     fixed:true,  displayOnly:false, desc:'Consumers who activated a coupon' },
+          { id:'red',     name:'Coupons Redeemed',           isRatio:false, auto:false,     fixed:true,  displayOnly:false, desc:'In-store redemptions' },
+          { id:'pending', name:'Coupons Pending Activation', isRatio:false, auto:'act-red', fixed:true,  displayOnly:true,  desc:'Activated minus redeemed (auto)' },
+          { id:'visits',  name:'Unique Site Visits',         isRatio:false, auto:false,     fixed:false, displayOnly:false, defaultOn:true, desc:'Unique visitors to campaign page' },
+          { id:'redval',  name:'Redeemed Value',             isRatio:false, auto:'redval',  fixed:false, displayOnly:true,  defaultOn:true, desc:'Total value redeemed (auto if offer value set)' },
+        ]
+      },
+      advanced: {
+        label: 'Advanced',
+        metrics: [
+          { id:'issued',  name:'Total Rewards Issued',       isRatio:false, auto:false,     fixed:true,  displayOnly:false, desc:'All rewards issued' },
+          { id:'act',     name:'Total Rewards Activated',    isRatio:false, auto:false,     fixed:true,  displayOnly:false, desc:'All rewards activated' },
+          { id:'red',     name:'Total Rewards Redeemed',     isRatio:false, auto:false,     fixed:true,  displayOnly:false, desc:'All rewards redeemed' },
+          { id:'pending', name:'Total Rewards Pending',      isRatio:false, auto:'act-red', fixed:true,  displayOnly:true,  desc:'Activated minus redeemed (auto)' },
+          { id:'visits',  name:'Unique Site Visits',         isRatio:false, auto:false,     fixed:false, displayOnly:false, defaultOn:true, desc:'Unique visitors to campaign page' },
+          { id:'redval',  name:'Total Value Redeemed',       isRatio:false, auto:'redval',  fixed:false, displayOnly:true,  defaultOn:true, desc:'Total value redeemed (auto if offer value set)' },
+          { id:'cpn_act', name:'Coupon — Activated',         isRatio:false, auto:false,     fixed:false, displayOnly:false, defaultOn:true, desc:'Breakdown: coupon activations' },
+          { id:'cpn_red', name:'Coupon — Redeemed',          isRatio:false, auto:false,     fixed:false, displayOnly:false, defaultOn:true, desc:'Breakdown: coupon redemptions' },
+          { id:'iv_act',  name:'Item Voucher — Activated',   isRatio:false, auto:false,     fixed:false, displayOnly:false, defaultOn:true, desc:'Breakdown: item voucher activations' },
+          { id:'iv_red',  name:'Item Voucher — Redeemed',    isRatio:false, auto:false,     fixed:false, displayOnly:false, defaultOn:true, desc:'Breakdown: item voucher redemptions' },
+        ]
+      }
+    }
+  }
+};
+
+function getActiveMetrics(c) {
+  const sol = c?.solution;
+  const pkg = c?.package;
+  if(!sol || !pkg || !PACKAGES[sol]?.packages[pkg]) return METRICS_DEF;
+  const all = PACKAGES[sol].packages[pkg].metrics;
+  // Always include fixed metrics; include optional only if enabled (defaults to defaultOn)
+  return all.filter(m => {
+    if(m.fixed) return true;
+    const enabled = c?.optionalMetrics?.[m.id];
+    return enabled !== undefined ? enabled : (m.defaultOn !== false);
+  });
+}
+
+function getAllPackageMetrics(c) {
+  const sol = c?.solution;
+  const pkg = c?.package;
+  if(!sol || !pkg || !PACKAGES[sol]?.packages[pkg]) return METRICS_DEF;
+  return PACKAGES[sol].packages[pkg].metrics;
+}
+
+function getAutoValue(metricId, inputs, c) {
+  if(metricId === 'pending') {
+    return Math.max(0, (inputs['act']||0) - (inputs['red']||0));
+  }
+  if(metricId === 'redval') {
+    const red = inputs['red'] || 0;
+    if(!c?.offerType || !c?.offerValue) return null;
+    return +(red * c.offerValue).toFixed(2);
+  }
+  return null;
+}
+
+function onSolutionChange() {
+  const sol = document.getElementById('s-solution').value;
+  const pkgSel = document.getElementById('s-package');
+  pkgSel.innerHTML = '<option value="">— Select package —</option>';
+  if(sol && PACKAGES[sol]) {
+    Object.entries(PACKAGES[sol].packages).forEach(([key,pkg])=>{
+      pkgSel.innerHTML += `<option value="${key}">${pkg.label}</option>`;
+    });
+  }
+  onPackageChange();
+}
+
+function toggleOptionalMetric(id, enabled) {
+  const c = activeCampaign();
+  if(!c) return;
+  c.optionalMetrics = c.optionalMetrics || {};
+  c.optionalMetrics[id] = enabled;
+  // Update row opacity
+  const row = document.getElementById('metric-row-'+id);
+  if(row) row.style.opacity = enabled ? '1' : '0.45';
+  // Show/hide target input
+  const input = document.getElementById('st-'+id);
+  if(input) input.closest('td').style.opacity = enabled ? '1' : '0.4';
+  recalcSetupTargets();
+}
+
+function onPackageChange() {
+  buildSetupTargetsTable();
+  recalcSetupTargets();
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// OPTIMISATION MODEL FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+function onOptModelChange() {
+  const model = document.getElementById('s-opt-model').value;
+  const reviewWrap = document.getElementById('s-opt-review-wrap');
+  if(reviewWrap) reviewWrap.style.display = model === 'unpaid' ? 'block' : 'none';
+}
+
+function isOptimisationActive(c, weekDate) {
+  if(!c || !weekDate) return false;
+  if(c.optModel === 'paid') return true;
+  if(c.optModel === 'unpaid' && c.optReviewDate) {
+    const review = new Date(c.optReviewDate);
+    const entry  = new Date(weekDate);
+    const diffMs = Math.abs(entry - review);
+    return diffMs < 7 * 24 * 60 * 60 * 1000;
+  }
+  return false;
+}
+
+function getOptimisationStatus(c, weekDate) {
+  if(!c?.optModel) return { active:false, label:'No optimisation set', colour:'var(--muted)', badge:'none' };
+  if(c.optModel === 'paid') return { active:true, label:'Paid Optimisation', colour:'var(--green)', badge:'paid' };
+  if(c.optModel === 'unpaid') {
+    if(!c.optReviewDate) return { active:false, label:'Unpaid — review date not set', colour:'var(--amber)', badge:'unpaid' };
+    const active = isOptimisationActive(c, weekDate);
+    const rd = new Date(c.optReviewDate).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    return active
+      ? { active:true,  label:`Review active (${rd})`, colour:'var(--green)', badge:'review-active' }
+      : { active:false, label:`Review: ${rd}`,          colour:'var(--amber)', badge:'review-locked' };
+  }
+  return { active:false, label:'', colour:'var(--muted)', badge:'none' };
+}
+
+async function loadState() {
+  // Show loading
+  document.getElementById('dashboard-content').innerHTML = `
+    <div style="text-align:center;padding:60px 20px;color:var(--muted);">
+      <div style="font-size:32px;margin-bottom:12px;">⏳</div>
+      <div style="font-size:16px;font-weight:600;color:var(--teal);">Loading campaign data…</div>
+    </div>`;
+
+  const activeUrl = window._sheetsUrl || SHEETS_URL;
+  if(activeUrl) {
+    // Try loading from Google Sheets
+    try {
+      setSyncStatus('⟳ Connecting to team data…', 'var(--muted)');
+      const res = await fetch(activeUrl);
+      const json = await res.json();
+      if(json.status === 'ok' && json.data) {
+        const loaded = JSON.parse(json.data);
+        state = { ...state, ...loaded };
+        setSyncStatus('🔗 Team sync on', 'var(--muted)');
+      } else {
+        setSyncStatus('🔗 Team sync on (no data yet)', 'var(--muted)');
+      }
+    } catch(e) {
+      console.warn('Could not load from Sheets, falling back to local:', e);
+      setSyncStatus('⚠ Using local data', 'var(--amber)');
+      const local = localStorage.getItem(LOCAL_KEY);
+      if(local) state = { ...state, ...JSON.parse(local) };
+    }
+  } else {
+    // No URL configured — use localStorage
+    const local = localStorage.getItem(LOCAL_KEY);
+    if(local) state = { ...state, ...JSON.parse(local) };
+    setSyncStatus('💾 Local only — add Sheets URL to sync', 'var(--amber)');
+  }
+
+  buildSetupTargetsTable();
+  renderSidebar();
+  renderDashboard();
+  document.getElementById('w-date').value = new Date().toISOString().split('T')[0];
+}
+
+async function save() {
+  const toSave = {
+    campaigns: state.campaigns,
+    activeCampaignId: state.activeCampaignId,
+    weeklyDraft: state.weeklyDraft || {}
+  };
+  const json = JSON.stringify(toSave);
+
+  // Always save locally as backup
+  localStorage.setItem(LOCAL_KEY, json);
+
+  const saveUrl = window._sheetsUrl || SHEETS_URL;
+  if(!saveUrl) return; // no remote configured
+
+  setSyncStatus('⟳ Saving…', 'var(--muted)');
+  try {
+    await fetch(saveUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ data: json })
+    });
+    setSyncStatus('✓ Saved — team sync on', 'var(--green)');
+    setTimeout(() => setSyncStatus('🔗 Team sync on', 'var(--muted)'), 2000);
+  } catch(e) {
+    console.error('Remote save failed:', e);
+    setSyncStatus('⚠ Remote save failed — saved locally', 'var(--amber)');
+  }
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function toast(m) { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2400); }
+
+function getMetaForMetric(id, activeMetrics) {
+  // First check active metrics list for name/desc
+  const active = activeMetrics?.find(x=>x.id===id);
+  // Then check METRICS_DEF for actions
+  const existing = METRICS_DEF.find(x=>x.id===id);
+  if(existing) return { ...existing, ...(active||{}) };
+  // Generic fallback for package-specific metrics
+  const genericActions = {
+    green: [
+      {t:'On track — no action needed this week.',p:'monitor'},
+      {t:'Document what is driving strong performance for future campaigns.',p:'monitor'}
+    ],
+    amber: [
+      {t:'Review current performance and identify what is causing the shortfall.',p:'soon'},
+      {t:'Check campaign setup and targeting are correctly configured.',p:'soon'},
+      {t:'Consider increasing promotion or reach if budget allows.',p:'soon'}
+    ],
+    red: [
+      {t:'Escalate immediately — this metric is significantly off track.',p:'urgent'},
+      {t:'Review campaign setup, targeting and creative for issues.',p:'urgent'},
+      {t:'Flag to client — shortfall will impact overall campaign performance.',p:'urgent'},
+      {t:'Check for any technical issues affecting this metric.',p:'soon'}
+    ]
+  };
+  return { id, name: active?.name||id, desc: active?.desc||'', isRatio:false, actions: genericActions, ...(active||{}) };
+}
+
+function getRAG(actual,target) {
+  const p = actual/target;
+  if(p > 1.15)  return 'amber'; // 116%+ — significantly over target
+  if(p >= 0.76) return 'green'; // 76–115% — on track (allows for strong weeks)
+  if(p >= 0.51) return 'amber'; // 51–75% — needs attention
+  return 'red';                  // 0–50% — off track
+}
+function ragPct(actual,target) {
+  if(!target||target===0) return null;
+  return Math.round((actual/target)*100);
+}
+function ragLabel(r,pct) {
+  if(r==='none') return '— No Target';
+  if(r==='green') return '🟢 On Track';
+  if(r==='red')   return '🔴 Off Track';
+  // amber — distinguish over vs under
+  if(pct!==undefined && pct!==null && pct>115) return '🟡 Over Target';
+  return '🟡 Needs Attention';
+}
+function fmtN(v,r) { if(v===null||v===undefined||v==='') return '—'; return r?(v*100).toFixed(1)+'%':Number(v).toLocaleString(); }
+function fmtPct(a,t) { if(!t||t===0) return null; return Math.round((a/t)*100); }
+function fillClass(r) { return {green:'pf-green',amber:'pf-amber',red:'pf-red',none:'pf-blue'}[r]; }
+
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+
+  const titles = { dashboard:'Dashboard', setup:'Campaign Setup', weekly:'Enter Weekly Data', analysis:'Analysis & Actions', export:'Client Export', history:'Week-on-Week Trends' };
+  document.getElementById('topbar-title').textContent = titles[id]||'';
+
+  // Topbar actions
+  const ta = document.getElementById('topbar-actions');
+  ta.innerHTML = '';
+  const c = activeCampaign();
+  if(id==='weekly'||id==='analysis'||id==='export'||id==='history') {
+    if(c) {
+      ta.innerHTML = `
+        <span style="font-size:12px;color:var(--text-muted);">
+          <span style="font-weight:600;color:var(--text);">${c.name}</span> · ${c.client||''}
+          ${c.weeks?' · '+c.weeks+' weeks':''}
+        </span>
+        <button class="btn btn-outline btn-sm" onclick="goScreen('setup')">⚙ Edit Setup</button>
+        ${(id==='weekly'||id==='analysis') ? '' : ''}
+      `;
+      if(id==='weekly'||id==='analysis') {
+        ta.innerHTML += `<button class="btn btn-sm btn-outline" onclick="goScreen('history')">📅 History</button>`;
+      }
+    }
+  }
+  if(id==='dashboard') document.querySelector('.nav-btn[onclick="goScreen(\'dashboard\')"]')?.classList.add('active');
+}
+
+function activeCampaign() {
+  return state.activeCampaignId ? state.campaigns[state.activeCampaignId] : null;
+}
+
+async function selectCampaign(id) {
+  state.activeCampaignId = id;
+  await save();
+  renderSidebar();
+  loadCampaignSetup(id);
+  goScreen('setup');
+}
+
+function renderSidebar() {
+  const container = document.getElementById('sidebar-campaigns');
+  const ids = Object.keys(state.campaigns);
+  if(!ids.length) { container.innerHTML = ''; return; }
+
+  container.innerHTML = ids.map(id => {
+    const c = state.campaigns[id];
+    const isActive = id === state.activeCampaignId;
+    const weeks = c.weeklyData ? Object.keys(c.weeklyData).length : 0;
+    const dot = weeks > 0 ? 'var(--green)' : 'var(--amber)';
+    return `
+      <div class="campaign-pill ${isActive?'active':''}" onclick="selectCampaign('${id}')">
+        <div style="overflow:hidden;">
+          <div class="cp-name">${c.name||'Untitled'}</div>
+          <div class="cp-client">${c.client||'No client'}</div>
+        </div>
+        <div class="cp-dot" style="background:${dot};"></div>
+      </div>`;
+  }).join('') +
+  `<button class="nav-btn ${state.activeCampaignId?'':'active'}" onclick="goScreen('weekly')" ${!state.activeCampaignId?'disabled':''} style="margin-top:4px;${!state.activeCampaignId?'opacity:0.4;cursor:not-allowed;':''}">
+    <span class="ni">✏️</span> Enter Week
+  </button>
+  <button class="nav-btn" onclick="goScreen('history')" ${!state.activeCampaignId?'disabled':''} style="${!state.activeCampaignId?'opacity:0.4;cursor:not-allowed;':''}">
+    <span class="ni">📅</span> History
+  </button>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+function renderDashboard() {
+  const ids = Object.keys(state.campaigns);
+  let html = '';
+  if(!ids.length) {
+    html = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">No campaigns yet</div><p style="font-size:14px;color:var(--text-muted);margin-top:8px;">Create your first campaign to get started</p><button class="btn btn-primary" style="margin-top:20px;" onclick="openNewCampaign()">+ New Campaign</button></div>`;
+  } else {
+    html = '<div class="dash-grid">';
+    ids.forEach(id => {
+      const c = state.campaigns[id];
+      const weeks = c.weeklyData ? Object.keys(c.weeklyData).length : 0;
+      const totalWeeks = c.weeks || 1;
+      const pct = Math.round((weeks/totalWeeks)*100);
+      const isActive = id === state.activeCampaignId;
+
+      // Calculate overall forecast RAG for each metric
+      const savedEntries = Object.values(c.weeklyData||{}).sort((a,b)=>new Date(a.weekDate)-new Date(b.weekDate));
+      const weeksRecorded = savedEntries.length;
+      const weeksRemaining = c.weeks ? Math.max(0, c.weeks - weeksRecorded) : 0;
+
+      const ragDots = METRICS_DEF.filter(m=>!m.isRatio).map(m => {
+        const overall = c.targets?.[m.id] || 0;
+        if(!overall) return '';
+        const cumul = savedEntries.reduce((sum,en)=>{ const x=en.metrics?.find(x=>x.id===m.id); return sum+(x?.actual||0); },0);
+        const avg = weeksRecorded > 0 ? cumul / weeksRecorded : 0;
+        const forecast = Math.round(cumul + (avg * weeksRemaining));
+        const rag = weeksRecorded > 0 ? getRAG(forecast, overall) : 'none';
+        const col = {green:'var(--green)',amber:'var(--amber)',red:'var(--red)',none:'var(--border)'}[rag];
+        const label = m.name.replace('Coupons ','');
+        return `<div style="display:flex;align-items:center;gap:4px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0;"></div>
+          <span style="font-size:10px;color:var(--muted);">${label}</span>
+        </div>`;
+      }).join('');
+      html += `
+        <div class="campaign-card ${isActive?'active-campaign':''}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+            <div class="cc-client" style="margin-bottom:0;">${c.client||'No client'}</div>
+            <button onclick="event.stopPropagation();deleteCampaignById('${id}')" title="Delete campaign"
+              style="background:none;border:1px solid var(--red-border);color:var(--red);border-radius:6px;font-size:11px;font-weight:600;padding:3px 8px;cursor:pointer;transition:all 0.15s;flex-shrink:0;"
+              onmouseover="this.style.background='var(--red-bg)'" onmouseout="this.style.background='none'">
+              ✕ Delete
+            </button>
+          </div>
+          <div class="cc-name" onclick="selectCampaignAndGo('${id}')" style="cursor:pointer;">${c.name||'Untitled'}</div>
+          <div class="cc-offer" onclick="selectCampaignAndGo('${id}')" style="cursor:pointer;">${c.offer||'No offer name'}</div>
+          <div class="cc-meta" onclick="selectCampaignAndGo('${id}')" style="cursor:pointer;">
+            <span class="cc-chip">${c.weeks||'?'} weeks</span>
+            <span class="cc-chip">${c.retailers||'No retailer'}</span>
+            <span class="cc-chip">${weeks} week${weeks!==1?'s':''} saved</span>
+          </div>
+          ${(() => {
+            const os = getOptimisationStatus(c, new Date().toISOString().split('T')[0]);
+            const bgCol = os.badge==='paid' ? 'var(--green-bg)' : os.badge==='review-active' ? 'var(--green-bg)' : 'var(--amber-bg)';
+            const txCol = os.badge==='paid' ? 'var(--green)' : os.badge==='review-active' ? 'var(--green)' : 'var(--amber)';
+            const bdCol = os.badge==='paid' ? 'var(--green-border)' : os.badge==='review-active' ? 'var(--green-border)' : 'var(--amber-border)';
+            const icon  = os.badge==='paid' ? '⚡' : os.badge==='review-active' ? '🔓' : os.badge==='review-locked' ? '🔒' : '—';
+            return os.label ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:5px;background:${bgCol};border:1px solid ${bdCol};color:${txCol};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">${icon} ${os.label}</div>` : '';
+          })()}
+          ${weeksRecorded > 0 ? `
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:8px;">Forecast RAG</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">${ragDots}</div>
+          </div>` : `
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);">No weeks saved yet</div>`}
+          <div class="cc-progress" onclick="selectCampaignAndGo('${id}')" style="cursor:pointer;">
+            ${(() => {
+              if(!c.startDate || !c.weeks) return `<div class="cc-prog-label"><span>Campaign progress</span><span>${pct}%</span></div><div class="cc-prog-bar"><div class="cc-prog-fill" style="width:${pct}%"></div></div>`;
+              const start = new Date(c.startDate);
+              const end   = c.endDate ? new Date(c.endDate) : new Date(c.startDate);
+              if(!c.endDate) end.setDate(end.getDate() + (c.weeks * 7));
+              const today = new Date();
+              const totalMs = end - start;
+              const elapsedMs = Math.min(Math.max(today - start, 0), totalMs);
+              const todayPct = Math.round((elapsedMs / totalMs) * 100);
+              const currentWeek = Math.min(c.weeks, Math.max(1, Math.ceil(elapsedMs / (7*24*60*60*1000))));
+              const fmtDate = d => d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+              return `
+                <div class="cc-prog-label" style="margin-bottom:4px;">
+                  <span>${fmtDate(start)}</span>
+                  <span style="color:var(--cyan);font-weight:600;">Wk ${currentWeek} of ${c.weeks}</span>
+                  <span>${fmtDate(end)}</span>
+                </div>
+                <div class="cc-prog-bar" style="position:relative;">
+                  <div class="cc-prog-fill" style="width:${todayPct}%"></div>
+                  <div style="position:absolute;top:-3px;left:${Math.min(todayPct,98)}%;transform:translateX(-50%);width:2px;height:11px;background:var(--teal);border-radius:2px;"></div>
+                </div>`;
+            })()}
+          </div>
+        </div>`;
+    });
+    html += `<div class="new-card" onclick="openNewCampaign()"><div class="new-card-icon">＋</div><div class="new-card-label">New Campaign</div></div>`;
+    html += '</div>';
+  }
+  document.getElementById('dashboard-content').innerHTML = html;
+}
+
+async function selectCampaignAndGo(id) {
+  state.activeCampaignId = id;
+  await save();
+  renderSidebar();
+  goScreen('weekly');
+  buildWeeklyInputs();
+}
+
+async function deleteCampaignById(id) {
+  const c = state.campaigns[id];
+  if(!c) return;
+  if(!confirm(`Delete "${c.name}"? All saved weeks will be lost. This cannot be undone.`)) return;
+  delete state.campaigns[id];
+  if(state.activeCampaignId === id) {
+    state.activeCampaignId = Object.keys(state.campaigns)[0] || null;
+  }
+  await save();
+  renderSidebar();
+  renderDashboard();
+  toast('Campaign deleted');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CAMPAIGN MODAL
+// ═══════════════════════════════════════════════════════════════
+function openNewCampaign() {
+  document.getElementById('modal-name').value = '';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('modal-name').focus(), 100);
+}
+
+function closeModal(e) {
+  if(!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+}
+
+async function createCampaignFromModal() {
+  const name = document.getElementById('modal-name').value.trim();
+  if(!name) { toast('Please enter a campaign name'); return; }
+  const id = uid();
+  state.campaigns[id] = { id, name, weeklyData:{}, createdAt: new Date().toISOString() };
+  state.activeCampaignId = id;
+  await save();
+  closeModal();
+  renderSidebar();
+  loadCampaignSetup(id);
+  goScreen('setup');
+  toast('Campaign created — fill in the details below');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CAMPAIGN SETUP
+// ═══════════════════════════════════════════════════════════════
+function buildSetupTargetsTable() {
+  const c = activeCampaign();
+  const allMetrics = getAllPackageMetrics(c);
+  const tbody = document.getElementById('setup-targets-body');
+  if(!tbody) return;
+
+  tbody.innerHTML = allMetrics.map(m => {
+    const isDisplayOnly = m.displayOnly;
+    const isOptional = !m.fixed;
+    const isEnabled = c?.optionalMetrics?.[m.id] !== undefined
+      ? c.optionalMetrics[m.id] : (m.defaultOn !== false);
+
+    const targetCell = isDisplayOnly
+      ? `<div style="font-size:11px;color:var(--muted);font-style:italic;padding:8px 0;">Auto-calculated — no target needed</div>`
+      : `<input type="number" id="st-${m.id}" placeholder="e.g. 10000" step="1" min="0" oninput="recalcSetupTargets()">`;
+
+    const weeklyCell = isDisplayOnly
+      ? `<div style="font-size:11px;color:var(--muted);font-style:italic;">—</div>`
+      : `<div class="weekly-calc-cell" id="stw-${m.id}">—</div>`;
+
+    const badge = isDisplayOnly
+      ? `<span style="font-size:9px;background:var(--cyan-bg);color:var(--cyan);border:1px solid var(--cyan-border);padding:1px 6px;border-radius:10px;margin-left:6px;font-family:'DM Mono',monospace;">AUTO</span>`
+      : isOptional
+      ? `<span style="font-size:9px;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);padding:1px 6px;border-radius:10px;margin-left:6px;font-family:'DM Mono',monospace;">OPTIONAL</span>`
+      : `<span style="font-size:9px;background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border);padding:1px 6px;border-radius:10px;margin-left:6px;font-family:'DM Mono',monospace;">FIXED</span>`;
+
+    return `
+    <tr id="metric-row-${m.id}" style="${isOptional && !isEnabled ? 'opacity:0.45;' : ''}">
+      <td style="padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${isOptional ? `<input type="checkbox" id="opt-${m.id}" ${isEnabled?'checked':''}
+            onchange="toggleOptionalMetric('${m.id}',this.checked)"
+            style="width:16px;height:16px;accent-color:var(--teal);cursor:pointer;">` : ''}
+          <div>
+            <div class="metric-tag">${m.name} ${badge}</div>
+            <div class="metric-sub">${m.desc}</div>
+          </div>
+        </div>
+      </td>
+      <td style="padding:10px 12px;border-bottom:1px solid var(--border);">${targetCell}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid var(--border);">${weeklyCell}</td>
+    </tr>`;
+  }).join('');
+}
+
+function recalcDates() {
+  const start = document.getElementById('s-start').value;
+  const end   = document.getElementById('s-end').value;
+  const display = document.getElementById('s-weeks-display');
+  const hidden  = document.getElementById('s-weeks');
+  if(start && end && end > start) {
+    const startD = new Date(start);
+    const endD   = new Date(end);
+    const diffMs = endD - startD;
+    const weeks  = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+    display.textContent = `${weeks} week${weeks!==1?'s':''}`;
+    hidden.value = weeks;
+  } else {
+    display.textContent = '—';
+    hidden.value = '';
+  }
+  recalcSetupTargets();
+}
+
+function recalcSetupTargets() {
+  const w = +document.getElementById('s-weeks').value || 0;
+
+  // Auto-calculate ATR target from activation and redemption targets
+  const actTarget = +document.getElementById('st-act')?.value || 0;
+  const redTarget = +document.getElementById('st-red')?.value || 0;
+  const atrTarget = actTarget > 0 ? redTarget / actTarget : 0;
+
+  // Update ATR display in setup table
+  const atrCell   = document.getElementById('st-atr');
+  const atrHidden = document.getElementById('st-atr-hidden');
+  if(atrCell)   atrCell.textContent = actTarget > 0 ? (atrTarget * 100).toFixed(1) + '%' : '—';
+  if(atrHidden) atrHidden.value = atrTarget;
+
+  const cForTargets = activeCampaign();
+  const metricsForTargets = getAllPackageMetrics(cForTargets).filter(m => {
+    if(m.displayOnly) return false;
+    if(!m.fixed) {
+      const cb = document.getElementById('opt-'+m.id);
+      return cb ? cb.checked : (m.defaultOn !== false);
+    }
+    return true;
+  });
+  metricsForTargets.forEach(m => {
+    const v = +document.getElementById('st-'+m.id)?.value || 0;
+    const el = document.getElementById('stw-'+m.id);
+    if(!el) return;
+    if(!w || !v) { el.textContent='—'; return; }
+    el.textContent = m.isRatio ? (v*100).toFixed(1)+'% (flat)' : Math.round(v/w).toLocaleString()+'/wk';
+  });
+}
+
+function loadCampaignSetup(id) {
+  const c = state.campaigns[id];
+  if(!c) return;
+  buildSetupTargetsTable();
+  document.getElementById('s-opt-model').value       = c.optModel||'';
+  document.getElementById('s-opt-review-date').value = c.optReviewDate||'';
+  const rw = document.getElementById('s-opt-review-wrap');
+  if(rw) rw.style.display = c.optModel==='unpaid'?'block':'none';
+  document.getElementById('s-solution').value   = c.solution||'';
+  onSolutionChange();
+  document.getElementById('s-package').value    = c.package||'';
+  document.getElementById('s-offer-type').value = c.offerType||'';
+  const ovWrap = document.getElementById('s-offer-value-wrap');
+  if(ovWrap) ovWrap.style.display = c.offerType ? 'block' : 'none';
+  document.getElementById('s-offer-value').value = c.offerValue||'';
+  document.getElementById('s-name').value      = c.name||'';
+  document.getElementById('s-client').value    = c.client||'';
+  document.getElementById('s-offer').value     = c.offer||'';
+  document.getElementById('s-start').value     = c.startDate||'';
+  document.getElementById('s-end').value       = c.endDate||'';
+  document.getElementById('s-weeks').value     = c.weeks||'';
+  // Update weeks display
+  const wd = document.getElementById('s-weeks-display');
+  if(wd) wd.textContent = c.weeks ? `${c.weeks} week${c.weeks!==1?'s':''}` : '—';
+  document.getElementById('s-retailers').value = c.retailers||'';
+  document.getElementById('s-objective').value = c.objective||'';
+  document.getElementById('delete-campaign-btn').style.display='inline-flex';
+  METRICS_DEF.forEach(m => {
+    if(m.id === 'atr') return; // ATR is auto-calculated
+    const el = document.getElementById('st-'+m.id);
+    if(el && c.targets) el.value = c.targets[m.id]||'';
+  });
+  // Also restore package-specific metric targets
+  getAllPackageMetrics(c).forEach(m => {
+    if(m.displayOnly) return;
+    const el = document.getElementById('st-'+m.id);
+    if(el && c.targets) el.value = c.targets[m.id]||'';
+  });
+  recalcSetupTargets();
+}
+
+async function saveCampaign() {
+  const id = state.activeCampaignId;
+  if(!id) return;
+  const name      = document.getElementById('s-name').value.trim();
+  const client    = document.getElementById('s-client').value.trim();
+  const offer     = document.getElementById('s-offer').value.trim();
+  const retailers = document.getElementById('s-retailers').value.trim();
+  const startDate = document.getElementById('s-start').value;
+  const endDate   = document.getElementById('s-end').value;
+  const objective = document.getElementById('s-objective').value.trim();
+
+  // Validate mandatory fields
+  const missing = [];
+  if(!name)      missing.push('Campaign Name');
+  if(!client)    missing.push('Client');
+  if(!offer)     missing.push('Offer Name');
+  if(!retailers) missing.push('Participating Retailers');
+  if(!startDate) missing.push('Campaign Start Date');
+  if(!endDate)   missing.push('Campaign End Date');
+  if(!objective) missing.push('Campaign Objective');
+
+  if(missing.length) {
+    toast(`Please fill in: ${missing.join(', ')}`);
+    // Highlight missing fields
+    ['s-name','s-client','s-offer','s-retailers','s-start','s-end','s-objective'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el && !el.value.trim()) {
+        el.style.borderColor = 'var(--red)';
+        el.addEventListener('input', () => el.style.borderColor = '', { once: true });
+      }
+    });
+    return;
+  }
+  const targets = {};
+  METRICS_DEF.forEach(m => {
+    if(m.id === 'atr') {
+      targets[m.id] = +document.getElementById('st-atr-hidden')?.value || 0;
+    } else {
+      targets[m.id] = +document.getElementById('st-'+m.id)?.value || 0;
+    }
+  });
+  const optModel      = document.getElementById('s-opt-model').value;
+  const optReviewDate = document.getElementById('s-opt-review-date').value;
+  if(!optModel) { toast('Please select an Optimisation Model'); return; }
+  const solution  = document.getElementById('s-solution').value;
+  const pkg       = document.getElementById('s-package').value;
+  const offerType = document.getElementById('s-offer-type').value;
+  const offerValue= +document.getElementById('s-offer-value').value||0;
+
+  // Validate solution + package
+  if(!solution) { toast('Please select a Solution'); return; }
+  if(!pkg)      { toast('Please select a Package'); return; }
+
+  // Save optional metric toggle states
+  const optionalMetrics = {};
+  getAllPackageMetrics(state.campaigns[id]).forEach(m => {
+    if(!m.fixed) {
+      const cb = document.getElementById('opt-'+m.id);
+      if(cb) optionalMetrics[m.id] = cb.checked;
+    }
+  });
+
+  state.campaigns[id] = {
+    ...state.campaigns[id],
+    name, client, offer, solution, package: pkg, offerType, offerValue,
+    optionalMetrics, optModel, optReviewDate,
+    startDate, endDate,
+    weeks: +document.getElementById('s-weeks').value||0,
+    retailers, objective,
+    targets
+  };
+  await save();
+  renderSidebar();
+  renderDashboard();
+  toast('Campaign saved ✓');
+  goScreen('weekly');
+  buildWeeklyInputs();
+  onWeekDateChange();
+}
+
+async function deleteCampaign() {
+  const id = state.activeCampaignId;
+  if(!id) return;
+  if(!confirm(`Delete "${state.campaigns[id]?.name}"? This cannot be undone.`)) return;
+  delete state.campaigns[id];
+  state.activeCampaignId = Object.keys(state.campaigns)[0] || null;
+  await save();
+  renderSidebar();
+  renderDashboard();
+  goScreen('dashboard');
+  toast('Campaign deleted');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WEEKLY ENTRY
+// ═══════════════════════════════════════════════════════════════
+function calcWeekNumber(dateStr) {
+  // Returns 1-based week number from campaign start date
+  const c = activeCampaign();
+  if(!c || !c.startDate || !dateStr) return null;
+  const start = new Date(c.startDate);
+  const sel   = new Date(dateStr);
+  // Normalise to Monday of each week
+  const startMon = new Date(start); startMon.setDate(start.getDate() - ((start.getDay()+6)%7));
+  const selMon   = new Date(sel);   selMon.setDate(sel.getDate()   - ((sel.getDay()+6)%7));
+  const diffMs   = selMon - startMon;
+  const diffWeeks = Math.round(diffMs / (7*24*60*60*1000)) + 1;
+  return diffWeeks > 0 ? diffWeeks : null;
+}
+
+function calcCumulativeFromHistory(metricId, upToDateStr) {
+  // Sum all saved weekly actuals up to and including the current week date
+  const c = activeCampaign();
+  if(!c || !c.weeklyData) return 0;
+  const entries = Object.values(c.weeklyData);
+  const meta = METRICS_DEF.find(x=>x.id===metricId);
+  if(meta.isRatio) {
+    // For ratios, return the most recent saved value as a starting point (user can adjust)
+    const sorted = entries.filter(e=>e.weekDate<=upToDateStr).sort((a,b)=>new Date(b.weekDate)-new Date(a.weekDate));
+    if(!sorted.length) return 0;
+    const m = sorted[0].metrics?.find(x=>x.id===metricId);
+    return m?.cumul || 0;
+  }
+  // For counts, sum all weeks up to but not including this one (user adds this week's actual)
+  return entries
+    .filter(e => e.weekDate < upToDateStr)
+    .reduce((sum, e) => {
+      const m = e.metrics?.find(x=>x.id===metricId);
+      return sum + (m?.actual || 0);
+    }, 0);
+}
+
+function onWeekDateChange(skipActuals) {
+  const dateStr = document.getElementById('w-date').value;
+  const weekNum = calcWeekNumber(dateStr);
+  const display = document.getElementById('w-weeknum-display');
+  const hidden  = document.getElementById('w-weeknum');
+  const c = activeCampaign();
+
+  // Always update week number display
+  if(weekNum) {
+    display.textContent = `Week ${weekNum}${c?.weeks ? ' of ' + c.weeks : ''}`;
+    hidden.value = weekNum;
+  } else {
+    display.textContent = c?.startDate ? 'Before start date' : 'Set start date in setup';
+    hidden.value = '';
+  }
+
+  // Always update cumulative hidden fields
+  METRICS_DEF.forEach(m => {
+    const cumul = calcCumulativeFromHistory(m.id, dateStr);
+    const hiddenEl = document.getElementById(`w-${m.id}-cumul`);
+    if(hiddenEl) hiddenEl.value = cumul;
+  });
+
+  // Only load/clear actuals if not told to skip (restore handles this itself)
+  if(!skipActuals) {
+    const savedWeek = c?.weeklyData?.[dateStr];
+    if(savedWeek) {
+      // Week exists — load its saved actuals
+      METRICS_DEF.forEach(m => {
+        if(m.id === 'atr') return;
+        const el = document.getElementById(`w-${m.id}-actual`);
+        const savedM = savedWeek.metrics?.find(x=>x.id===m.id);
+        if(el) el.value = savedM?.actual !== undefined ? savedM.actual : '';
+      });
+      const notesEl = document.getElementById('w-notes');
+      if(notesEl && savedWeek.notes) notesEl.value = savedWeek.notes;
+      renderWeeklyRagSummary();
+    } else {
+      // Fresh week — clear all actuals
+      METRICS_DEF.forEach(m => {
+        if(m.id === 'atr') return;
+        const el = document.getElementById(`w-${m.id}-actual`);
+        if(el) el.value = '';
+      });
+      const notesEl = document.getElementById('w-notes');
+      if(notesEl) notesEl.value = '';
+      // Clear RAG summary for fresh week
+      const ragContainer = document.getElementById('weekly-rag-summary');
+      if(ragContainer) ragContainer.innerHTML = '';
+    }
+    recalcAtr();
+  }
+}
+
+function buildWeeklyInputs() {
+  const c = activeCampaign();
+  const container = document.getElementById('weekly-metric-inputs');
+  if(!container) return;
+
+  // Guard — if no targets set yet, prompt user to complete setup first
+  const hasTargets = c?.targets && Object.values(c.targets).some(v => v > 0);
+  const hasWeeks   = c?.weeks > 0;
+
+  if(!c) {
+    container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);">
+      <div style="font-size:24px;margin-bottom:8px;">📋</div>
+      <div style="font-weight:600;color:var(--teal);margin-bottom:6px;">No campaign selected</div>
+      <div style="font-size:13px;">Select or create a campaign from the dashboard first.</div>
+    </div>`;
+    return;
+  }
+
+  if(!hasTargets || !hasWeeks) {
+    container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);">
+      <div style="font-size:24px;margin-bottom:8px;">⚙️</div>
+      <div style="font-weight:600;color:var(--teal);margin-bottom:6px;">Campaign setup incomplete</div>
+      <div style="font-size:13px;margin-bottom:16px;">Please set the total weeks and targets in campaign setup before entering weekly data.</div>
+      <button class="btn btn-primary btn-sm" onclick="goScreen('setup')">Go to Setup →</button>
+    </div>`;
+    return;
+  }
+
+  // ATR target = overall redemption target ÷ overall activation target
+  const atrTarget = (c.targets.act && c.targets.red)
+    ? c.targets.red / c.targets.act
+    : (c.targets.atr || 0);
+
+  const activeMetrics = getActiveMetrics(c);
+  // Build current inputs map for auto-calc
+  function getInputsMap() {
+    const map = {};
+    activeMetrics.forEach(m => {
+      const el = document.getElementById('w-'+m.id+'-actual');
+      if(el) map[m.id] = +el.value || 0;
+    });
+    return map;
+  }
+  function recalcAutoFields() {
+    const inputs = getInputsMap();
+    activeMetrics.forEach(m => {
+      if(!m.auto) return;
+      const val = getAutoValue(m.id, inputs, c);
+      const el  = document.getElementById('w-'+m.id+'-actual-display');
+      const hid = document.getElementById('w-'+m.id+'-actual');
+      if(val !== null && val !== undefined) {
+        if(el)  el.textContent = m.id==='redval' ? '£'+val.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : val.toLocaleString();
+        if(hid) hid.value = val;
+      } else {
+        if(el)  el.textContent = '—';
+        if(hid) hid.value = 0;
+      }
+    });
+    saveWeeklyFormState();
+  }
+
+  container.innerHTML = activeMetrics.map(m => {
+    const overallTarget = c.targets?.[m.id] || 0;
+    const weeklyTarget  = overallTarget && c.weeks && !m.isRatio
+      ? Math.round(overallTarget / c.weeks) : overallTarget;
+    const isATR  = m.id === 'atr';
+    const isAuto = m.auto && m.auto !== false;
+
+    const actualInput = isAuto
+      ? `<div class="wsb-target" id="w-${m.id}-actual-display" style="flex:1;background:var(--cyan-bg);border-color:var(--cyan-border);color:var(--cyan);font-weight:600;">—</div>
+         <input type="hidden" id="w-${m.id}-actual" value="0">`
+      : isATR
+      ? `<div class="wsb-target" id="w-atr-actual-display" style="flex:1;background:var(--cyan-bg);border-color:var(--cyan-border);color:var(--cyan);font-weight:600;">—</div>
+         <input type="hidden" id="w-atr-actual" value="0">`
+      : `<input class="wsb-input" type="number" id="w-${m.id}-actual" placeholder="0" step="1" min="0" oninput="recalcAutoFields();recalcAtr()">`;
+
+    return `
+      <div class="week-stat-box"${isATR?' style="border-color:var(--cyan-border);background:var(--cyan-bg);"':''}>
+        <div class="wsb-label" style="${isATR?'color:var(--cyan);':''}">${m.name}${isATR?' <span style="font-size:9px;opacity:0.7;">(auto)</span>':''}</div>
+        <div class="wsb-inputs">
+          <div class="wsb-row">
+            <span class="wsb-sublabel">This week</span>
+            <div style="flex:1;display:flex;gap:6px;align-items:center;">${actualInput}</div>
+          </div>
+          <input type="hidden" id="w-${m.id}-cumul-display" value="0">
+          <input type="hidden" id="w-${m.id}-cumul" value="0">
+          <div class="wsb-row">
+            <span class="wsb-sublabel">Wk target</span>
+            <div class="wsb-target" id="wt-${m.id}" style="${isATR?'background:var(--cyan-bg);border-color:var(--cyan-border);color:var(--cyan);':''}">
+              ${weeklyTarget ? fmtN(weeklyTarget, m.isRatio) : '—'}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Render the separate overall targets reference table
+  renderOverallTargetsTable();
+}
+
+function renderOverallTargetsTable() {
+  const c = activeCampaign();
+  const container = document.getElementById('overall-targets-table');
+  if(!container || !c?.targets) return;
+
+  const tableMetrics = getActiveMetrics(c).filter(m=>!m.auto||m.id==='redval');
+
+  // Sort saved entries chronologically
+  const savedEntries = Object.values(c.weeklyData || {}).sort((a,b) => new Date(a.weekDate) - new Date(b.weekDate));
+  const weeksRecorded = savedEntries.length;
+  const weeksRemaining = c.weeks ? Math.max(0, c.weeks - weeksRecorded) : 0;
+  const weekPct = c.weeks ? Math.round((weeksRecorded / c.weeks) * 100) : null;
+
+  const cumulTotals = {};
+  const avgPerWeek  = {};
+  tableMetrics.forEach(m => {
+    if(m.isRatio && m.id === 'atr') {
+      // ATR cumulative = total redeemed to date ÷ total activated to date
+      const totalAct = savedEntries.reduce((sum,en)=>{ const x=en.metrics?.find(x=>x.id==='act'); return sum+(x?.actual||0); }, 0);
+      const totalRed = savedEntries.reduce((sum,en)=>{ const x=en.metrics?.find(x=>x.id==='red'); return sum+(x?.actual||0); }, 0);
+      cumulTotals[m.id] = totalAct > 0 ? totalRed / totalAct : 0;
+      avgPerWeek[m.id]  = null;
+    } else {
+      const total = savedEntries.reduce((sum, en) => {
+        const met = en.metrics?.find(x=>x.id===m.id);
+        return sum + (met?.actual || 0);
+      }, 0);
+      cumulTotals[m.id] = total;
+      avgPerWeek[m.id]  = weeksRecorded > 0 ? total / weeksRecorded : 0;
+    }
+  });
+
+  const rows = tableMetrics.map(m => {
+    const overall  = c.targets?.[m.id] || 0;
+    const weekly   = overall && c.weeks ? (m.isRatio ? overall : Math.round(overall / c.weeks)) : 0;
+    const cumul    = cumulTotals[m.id] || 0;
+    const pct      = overall ? Math.round((cumul / overall) * 100) : null;
+    const barW     = pct !== null ? Math.min(100, pct) : 0;
+
+    // Forecast: cumulative + (avg per week × weeks remaining)
+    const avg      = avgPerWeek[m.id];
+    const forecast = (!m.isRatio && avg !== null && weeksRemaining > 0)
+      ? Math.round(cumul + (avg * weeksRemaining))
+      : (!m.isRatio && weeksRecorded > 0) ? cumul : null; // if no weeks remain, forecast = current
+
+    const forecastPct = (forecast !== null && overall) ? Math.round((forecast / overall) * 100) : null;
+
+    const colOf = (p) => p === null ? 'var(--muted)'
+      : p > 100  ? 'var(--amber)'
+      : p >= 76  ? 'var(--green)'
+      : p >= 51  ? 'var(--amber)'
+      : 'var(--red)';
+
+    const barCol     = colOf(pct);
+    const forecastCol= colOf(forecastPct);
+
+    // Forecast label
+    let forecastHtml = '—';
+    if(forecast !== null && !m.isRatio) {
+      const diff = forecast - overall;
+      const diffStr = diff >= 0
+        ? `<span style="color:var(--green);font-size:10px;">+${Math.round(diff).toLocaleString()}</span>`
+        : `<span style="color:var(--red);font-size:10px;">${Math.round(diff).toLocaleString()}</span>`;
+      forecastHtml = `
+        <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:${forecastCol};">${fmtN(forecast, m.isRatio)}</div>
+        <div style="font-size:10px;margin-top:1px;display:flex;align-items:center;gap:4px;">
+          <span style="color:${forecastCol};font-weight:600;">${forecastPct}% of target</span>
+          ${diffStr}
+        </div>`;
+    } else if(m.isRatio) {
+      forecastHtml = `<span style="font-size:11px;color:var(--muted);">See weekly RAG</span>`;
+    }
+
+    return `
+      <tr>
+        <td style="padding:8px 14px;font-weight:600;font-size:12px;color:var(--teal);border-bottom:1px solid var(--teal-border);min-width:140px;">${m.name}</td>
+        <td style="padding:8px 14px;font-family:'DM Mono',monospace;font-size:13px;text-align:center;border-bottom:1px solid var(--teal-border);font-weight:700;color:var(--teal);">${overall ? fmtN(overall, m.isRatio) : '—'}</td>
+        <td style="padding:8px 14px;font-family:'DM Mono',monospace;font-size:13px;text-align:center;border-bottom:1px solid var(--teal-border);color:var(--muted);">${weekly ? fmtN(weekly, m.isRatio) : '—'}</td>
+        <td style="padding:8px 14px;font-family:'DM Mono',monospace;font-size:13px;text-align:center;border-bottom:1px solid var(--teal-border);font-weight:600;color:var(--teal);">${cumul ? fmtN(cumul, m.isRatio) : '—'}</td>
+        <td style="padding:8px 14px;border-bottom:1px solid var(--teal-border);min-width:160px;">${forecastHtml}</td>
+      </tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="background:var(--surface);border:1.5px solid var(--teal-border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);">
+      <div style="background:var(--teal);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:white;font-family:'DM Mono',monospace;">Overall Campaign Stats</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          ${weekPct !== null ? `
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;color:rgba(255,255,255,0.6);">${weeksRecorded} of ${c.weeks} weeks saved</span>
+            <div style="width:80px;background:rgba(255,255,255,0.2);border-radius:99px;height:5px;overflow:hidden;">
+              <div style="background:var(--green-hi);height:100%;border-radius:99px;width:${weekPct}%;"></div>
+            </div>
+          </div>` : ''}
+          <span style="font-size:11px;color:rgba(255,255,255,0.5);">${c.name}</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:var(--teal-light);">
+              <th style="padding:7px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);font-family:'DM Mono',monospace;text-align:left;border-bottom:1px solid var(--teal-border);">Metric</th>
+              <th style="padding:7px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);font-family:'DM Mono',monospace;text-align:center;border-bottom:1px solid var(--teal-border);">Overall Target</th>
+              <th style="padding:7px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);font-family:'DM Mono',monospace;text-align:center;border-bottom:1px solid var(--teal-border);">Weekly Target</th>
+              <th style="padding:7px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);font-family:'DM Mono',monospace;text-align:center;border-bottom:1px solid var(--teal-border);">Cumulative</th>
+              <th style="padding:7px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);font-family:'DM Mono',monospace;text-align:left;border-bottom:1px solid var(--teal-border);">📈 Forecast to Completion</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      ${weeksRecorded > 0 ? `
+      <div style="padding:8px 16px;background:var(--surface2);border-top:1px solid var(--teal-border);font-size:11px;color:var(--muted);">
+        📈 Forecast based on average of ${weeksRecorded} week${weeksRecorded!==1?'s':''} recorded · ${weeksRemaining} week${weeksRemaining!==1?'s':''} remaining
+      </div>` : ''}
+    </div>`;
+}
+
+
+function renderWeeklyRagSummary() {
+  const container = document.getElementById('weekly-rag-summary');
+  if(!container) return;
+
+  const c = activeCampaign();
+  const weekDate = document.getElementById('w-date')?.value;
+  if(!c || !weekDate) { container.innerHTML = ''; return; }
+
+  const savedWeek = c.weeklyData?.[weekDate];
+  if(!savedWeek) { container.innerHTML = ''; return; }
+
+  const atrTarget = (c.targets?.act && c.targets?.red) ? c.targets.red / c.targets.act : (c.targets?.atr || 0);
+
+  const ragC = {
+    green: { bg:'var(--green-bg)', border:'var(--green-border)', tx:'var(--green)' },
+    amber: { bg:'var(--amber-bg)', border:'var(--amber-border)', tx:'var(--amber)' },
+    red:   { bg:'var(--red-bg)',   border:'var(--red-border)',   tx:'var(--red)'   },
+    none:  { bg:'var(--surface2)', border:'var(--border)',       tx:'var(--muted)' }
+  };
+
+  const metricRows = savedWeek.metrics.map(m => {
+    const meta        = METRICS_DEF.find(x=>x.id===m.id);
+    const wkTarget    = m.weeklyTarget || 0;
+    const rag         = wkTarget ? getRAG(m.actual, wkTarget) : 'none';
+    const pct         = wkTarget ? Math.round((m.actual / wkTarget) * 100) : null;
+    const rc          = ragC[rag];
+    const barW        = pct !== null ? Math.min(100, pct) : 0;
+    const ragTxt      = ragLabel(rag, pct).replace(/[🟢🟡🔴]/g,'').trim();
+
+    return `
+      <div style="background:${rc.bg};border:1px solid ${rc.border};border-left:4px solid ${rc.tx};border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div style="min-width:180px;flex:1;">
+          <div style="font-weight:700;font-size:13px;color:var(--teal);">${meta.name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+            ${fmtN(m.actual, m.isRatio)} actual &nbsp;/&nbsp; ${wkTarget ? fmtN(wkTarget, m.isRatio) : '—'} target
+          </div>
+        </div>
+        <div style="flex:2;min-width:120px;">
+          <div style="background:rgba(0,0,0,0.08);border-radius:99px;height:8px;overflow:hidden;">
+            <div style="background:${rc.tx};height:100%;border-radius:99px;width:${barW}%;transition:width 0.4s ease;"></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <span style="font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:${rc.tx};">${pct !== null ? pct+'%' : '—'}</span>
+          <span style="font-size:11px;font-weight:600;color:${rc.tx};background:white;padding:3px 9px;border-radius:20px;border:1px solid ${rc.border};">${ragTxt}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Check if any metric needs attention
+  const hasIssues = savedWeek.metrics.some(m => {
+    const rag = m.weeklyTarget ? getRAG(m.actual, m.weeklyTarget) : 'none';
+    return rag === 'red' || rag === 'amber';
+  });
+
+  const analyseBtn = hasIssues
+    ? `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center;">
+        <button class="btn btn-accent" onclick="runAnalysis()">
+          ⚠ Issues found — Run Analysis &amp; Get Suggestions →
+        </button>
+        <button class="btn btn-outline" onclick="skipToReport()" style="border-color:var(--teal-border);color:var(--teal);">
+          📄 Skip to Report
+        </button>
+       </div>`
+    : `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center;">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;">
+          ✓ All metrics on track — no optimisation needed this week
+        </div>
+        <button class="btn btn-primary" onclick="skipToReport()">
+          📄 Generate Report →
+        </button>
+       </div>`;
+
+  container.innerHTML = `
+    <div style="background:var(--surface);border:1.5px solid var(--teal-border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);">
+      <div style="background:var(--teal);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:white;font-family:'DM Mono',monospace;">This Week's Performance</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.6);">w/c ${new Date(weekDate).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}${savedWeek.weekNum ? ' · Week '+savedWeek.weekNum : ''}</div>
+      </div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:8px;">
+        ${metricRows}
+        ${analyseBtn}
+      </div>
+    </div>`;
+}
+
+function recalcAtr() {
+  const act = +document.getElementById('w-act-actual')?.value || 0;
+  const red = +document.getElementById('w-red-actual')?.value || 0;
+  const atr = act > 0 ? red / act : 0;
+  const display = document.getElementById('w-atr-actual-display');
+  const hidden  = document.getElementById('w-atr-actual');
+  if(display) display.textContent = act > 0 ? (atr * 100).toFixed(1) + '%' : '—';
+  if(hidden)  hidden.value = atr;
+  // Synchronously save draft so data persists on navigation
+  saveWeeklyFormState();
+}
+
+function toggleCumulEdit(id) {
+  const row = document.getElementById(`w-${id}-cumul-edit-row`);
+  if(row) row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+}
+
+async function saveWeekData() {
+  const c = activeCampaign();
+  if(!c) { toast('No campaign selected'); return; }
+  const weekDate = document.getElementById('w-date').value;
+  if(!weekDate) { toast('Please select a week commencing date first'); return; }
+
+  const weekNum    = +document.getElementById('w-weeknum').value || 0;
+  const notes      = document.getElementById('w-notes').value;
+  const totalWeeks = c.weeks || 0;
+  const atrTarget  = (c.targets?.act && c.targets?.red) ? c.targets.red / c.targets.act : (c.targets?.atr || 0);
+
+  const metrics = METRICS_DEF.map(m => {
+    const actual = m.id === 'atr'
+      ? +document.getElementById('w-atr-actual')?.value || 0
+      : +document.getElementById(`w-${m.id}-actual`)?.value || 0;
+    const cumul  = +document.getElementById(`w-${m.id}-cumul`)?.value || 0;
+    const cumulWithThisWeek = m.isRatio ? cumul : cumul + actual;
+    const overall      = m.id === 'atr' ? atrTarget : (c.targets?.[m.id] || 0);
+    const weeklyTarget = overall && totalWeeks && !m.isRatio ? overall / totalWeeks : overall;
+    const cumulTarget  = overall && totalWeeks && weekNum && !m.isRatio ? (overall / totalWeeks) * weekNum : overall;
+    return { id: m.id, actual, cumul: cumulWithThisWeek, overall, weeklyTarget, cumulTarget, isRatio: m.isRatio };
+  });
+
+  // Recalculate ATR cumulative as total redeemed ÷ total activated (more accurate than stored value)
+  const actMet = metrics.find(m=>m.id==='act');
+  const redMet = metrics.find(m=>m.id==='red');
+  const atrMet = metrics.find(m=>m.id==='atr');
+
+  // Sum all previously saved actuals + this week
+  const allSaved = Object.values(c.weeklyData || {});
+  const prevAct = allSaved.filter(e=>e.weekDate !== weekDate).reduce((sum,en)=>{
+    const m=en.metrics?.find(x=>x.id==='act'); return sum+(m?.actual||0);
+  }, 0);
+  const prevRed = allSaved.filter(e=>e.weekDate !== weekDate).reduce((sum,en)=>{
+    const m=en.metrics?.find(x=>x.id==='red'); return sum+(m?.actual||0);
+  }, 0);
+  const totalAct = prevAct + (actMet?.actual || 0);
+  const totalRed = prevRed + (redMet?.actual || 0);
+  if(atrMet) atrMet.cumul = totalAct > 0 ? totalRed / totalAct : 0;
+
+  // Save to weeklyData
+  // Save agency optimisation suggestions if paid model
+  const agencyOpt = {};
+  if(c.optModel === 'paid') {
+    activeMetrics.forEach(m => {
+      const el = document.getElementById('agency-opt-'+m.id);
+      if(el && el.value) agencyOpt[m.id] = el.value;
+    });
+  }
+
+  if(!c.weeklyData) c.weeklyData = {};
+  c.weeklyData[weekDate] = {
+    campaignId: c.id, weekNum, weekDate, notes, metrics, agencyOpt,
+    savedAt: new Date().toISOString(), selectedActions: {}
+  };
+  await save();
+  renderSidebar();
+  renderDashboard();
+
+  // Update status message
+  const status = document.getElementById('save-week-status');
+  if(status) {
+    status.textContent = `✓ Week saved at ${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}`;
+    status.style.color = 'var(--green)';
+    setTimeout(() => { status.textContent = ''; }, 4000);
+  }
+
+  // Refresh cumulative display for next time
+  onWeekDateChange();
+  renderOverallTargetsTable();
+  renderWeeklyRagSummary();
+  toast('Week saved ✓');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ANALYSIS
+// ═══════════════════════════════════════════════════════════════
+function runAnalysis() {
+  const c = activeCampaign();
+  if(!c) { toast('No campaign selected'); return; }
+
+  const weekNum   = +document.getElementById('w-weeknum').value || 0;
+  const weekDate  = document.getElementById('w-date').value;
+  const notes     = document.getElementById('w-notes').value;
+  const totalWeeks = c.weeks || 0;
+
+  const activeMetrics = getActiveMetrics(c);
+  const metrics = activeMetrics.map(m => {
+    const actual  = +document.getElementById('w-'+m.id+'-actual')?.value || 0;
+    const cumul   = +document.getElementById('w-'+m.id+'-cumul')?.value  || 0;
+    // Add this week's actual to the cumulative-to-date from history
+    const cumulWithThisWeek = m.isRatio ? cumul : cumul + actual;
+    const overall = c.targets?.[m.id] || 0;
+    const weeklyTarget = overall && totalWeeks && !m.isRatio ? overall/totalWeeks : overall;
+    const cumulTarget  = overall && totalWeeks && weekNum && !m.isRatio ? (overall/totalWeeks)*weekNum : overall;
+    return { id:m.id, actual, cumul: cumulWithThisWeek, overall, weeklyTarget, cumulTarget, isRatio:m.isRatio };
+  });
+
+  state.weeklyEntry = { campaignId: c.id, weekNum, weekDate, notes, metrics };
+  const actMetrics = getActiveMetrics(c);
+  state.selectedActions = {};
+  actMetrics.forEach(m => state.selectedActions[m.id] = []);
+
+  // RAG strip
+  const counts = {green:0,amber:0,red:0};
+  metrics.forEach(m => { const r=getRAG(m.actual,m.weeklyTarget); if(r!=='none') counts[r]++; });
+  document.getElementById('rag-strip').innerHTML = `
+    ${counts.red   ? `<div class="rag-tile red"><div class="rag-tile-big">${counts.red}</div><div class="rag-tile-lbl">Off Track</div></div>`:''}
+    ${counts.amber ? `<div class="rag-tile amber"><div class="rag-tile-big">${counts.amber}</div><div class="rag-tile-lbl">Needs Attention</div></div>`:''}
+    ${counts.green ? `<div class="rag-tile green"><div class="rag-tile-big">${counts.green}</div><div class="rag-tile-lbl">On Track</div></div>`:''}
+    ${weekNum&&totalWeeks ? `<div class="rag-tile"><div class="rag-tile-big" style="font-size:22px;padding-top:5px;">${weekNum}/${totalWeeks}</div><div class="rag-tile-lbl">Week</div></div>`:''}
+  `;
+
+  // Sort red first
+  const ord = {red:0,amber:1,green:2,none:3};
+  const sorted = [...metrics].sort((a,b)=>ord[getRAG(a.actual,a.weeklyTarget)]-ord[getRAG(b.actual,b.weeklyTarget)]);
+
+  const container = document.getElementById('analysis-cards');
+  container.innerHTML = '';
+
+  sorted.forEach(m => {
+    const meta = getMetaForMetric(m.id, actMetrics);
+    const rag  = getRAG(m.actual, m.weeklyTarget);
+    const wPct = fmtPct(m.actual, m.weeklyTarget);
+    const cPct = fmtPct(m.cumul, m.cumulTarget);
+    const actions = rag!=='none' ? meta.actions[rag] : [];
+
+    const progHtml = `
+      <div style="margin-bottom:12px;">
+        <div class="prog-row">
+          <div class="prog-labels"><span>This week vs weekly target</span><span>${fmtN(m.actual,m.isRatio)} / ${fmtN(m.weeklyTarget,m.isRatio)}${wPct!==null?` (${wPct}%)`:''}  </span></div>
+          <div class="prog-track"><div class="prog-fill ${fillClass(rag)}" style="width:${Math.min(100,wPct||0)}%"></div></div>
+        </div>
+        ${m.cumul && m.cumulTarget ? `
+        <div class="prog-row">
+          <div class="prog-labels"><span>Cumulative vs expected-to-date</span><span>${fmtN(m.cumul,m.isRatio)} / ${fmtN(m.cumulTarget,m.isRatio)}${cPct!==null?` (${cPct}%)`:''}  </span></div>
+          <div class="prog-track"><div class="prog-fill pf-blue" style="width:${Math.min(100,cPct||0)}%"></div></div>
+        </div>` : ''}
+      </div>`;
+
+    const actionsHtml = actions.map((a,ai)=>`
+      <div class="action-item" id="ai-${m.id}-${ai}" onclick="toggleAction('${m.id}',${ai})">
+        <div class="acheck" id="ac-${m.id}-${ai}">✓</div>
+        <div class="atext">${a.t}</div>
+        <div class="ppip pp-${a.p}">${a.p}</div>
+      </div>`).join('');
+
+    // Determine optimisation model for this campaign
+    const optStatus = getOptimisationStatus(c, state.weeklyEntry?.weekDate);
+    const optActive = optStatus.active;
+    const isPaid    = c.optModel === 'paid';
+    const isUnpaid  = c.optModel === 'unpaid';
+
+    // Build action section based on RAG + optimisation model
+    let actionSection = '';
+    if(rag === 'green') {
+      actionSection = `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--green-bg);border:1px solid var(--green-border);border-radius:8px;margin-top:8px;">
+        <span style="font-size:16px;">✓</span>
+        <span style="font-size:13px;font-weight:600;color:var(--green);">On track — no action needed this week</span>
+      </div>`;
+    } else if(rag !== 'none') {
+      if(!optActive) {
+        // Locked — show greyed out message
+        actionSection = `<hr class="div">
+          <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:8px;padding:12px 14px;margin-top:4px;opacity:0.6;">
+            <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;">🔒 Optimisation locked</div>
+            <div style="font-size:12px;color:var(--muted);">${isUnpaid ? 'Optimisation fields unlock on the agreed review date: <b>'+new Date(c.optReviewDate||'').toLocaleDateString('en-GB',{day:'numeric',month:'long'})+'</b>' : 'No optimisation model set — configure in campaign setup.'}</div>
+          </div>`;
+      } else if(isPaid) {
+        // Paid: free-text agency suggestions first, then tick-box actions
+        actionSection = `<hr class="div">
+          <div class="act-heading" style="display:flex;align-items:center;gap:8px;">
+            <span style="background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;">PAID</span>
+            Agency Optimisation Suggestions
+          </div>
+          <textarea class="notes-area" id="agency-opt-${m.id}" placeholder="Paste or type the optimisation suggestions from your agency for ${meta.name}…" style="min-height:72px;margin-bottom:12px;border-color:var(--cyan-border);background:var(--cyan-bg);"></textarea>
+          <div class="act-heading" style="margin-top:4px;">Internal reference — recommended actions</div>
+          ${actionsHtml}`;
+      } else if(isUnpaid && optActive) {
+        // Unpaid, review week active: just tick-box actions
+        actionSection = `<hr class="div">
+          <div class="act-heading" style="display:flex;align-items:center;gap:8px;">
+            <span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;">MID-CAMPAIGN REVIEW</span>
+            Recommended actions
+          </div>
+          ${actionsHtml}`;
+      }
+    }
+
+    container.innerHTML += `
+      <div class="mcard ${rag}">
+        <div class="mcard-head" onclick="toggleCard('${m.id}')">
+          <div><div class="mname">${meta.name}</div><div class="mdesc">${meta.desc}</div></div>
+          <div class="stat-row">
+            ${wPct!==null?`<div class="pchip pchip-${rag}">${wPct}% wk</div>`:''}
+            ${cPct!==null&&m.cumul?`<div class="pchip pchip-blue">${cPct}% cum</div>`:''}
+            <div class="stat-b"><div class="stat-v">${fmtN(m.actual,m.isRatio)}</div><div class="stat-l">This Wk</div></div>
+            <div class="stat-b"><div class="stat-v">${fmtN(m.weeklyTarget,m.isRatio)}</div><div class="stat-l">Wk Target</div></div>
+            <div class="rag-badge rb-${rag}">${ragLabel(rag,wPct)}</div>
+          </div>
+        </div>
+        <div class="mcard-body ${rag === 'green' ? 'open' : 'open'}" id="mb-${m.id}">
+          ${progHtml}
+          ${actionSection}
+          ${rag !== 'green' ? `<div style="margin-top:12px;"><div class="act-heading" style="margin-bottom:4px;">Additional notes</div>
+          <textarea class="notes-area" id="mn-${m.id}" placeholder="Extra context or custom actions…" style="min-height:48px;"></textarea></div>` : `<input type="hidden" id="mn-${m.id}" value="">`}
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('ws2').className = 'step-item act';
+  renderOverallProgress();
+  goScreen('analysis');
+}
+
+function skipToReport() {
+  // Build weeklyEntry state from saved week without going through analysis screen
+  const c = activeCampaign();
+  if(!c) { toast('No campaign selected'); return; }
+  const weekDate = document.getElementById('w-date')?.value;
+  if(!weekDate) { toast('Please save the week first'); return; }
+  const savedWeek = c.weeklyData?.[weekDate];
+  if(!savedWeek) { toast('Please save the week first'); return; }
+
+  // Populate weeklyEntry from saved data
+  state.weeklyEntry = { ...savedWeek };
+  // Clear selected actions since we're skipping analysis
+  const actMetrics = getActiveMetrics(c);
+  state.selectedActions = {};
+  actMetrics.forEach(m => state.selectedActions[m.id] = []);
+
+  // Mark steps
+  document.getElementById('ws2').className = 'step-item done';
+  document.getElementById('ws3').className = 'step-item act';
+  document.getElementById('ws2b').className = 'step-item done';
+  document.getElementById('ws3b').className = 'step-item act';
+
+  goExport();
+}
+
+function renderOverallProgress() {
+  const c = activeCampaign();
+  const e = state.weeklyEntry;
+  const container = document.getElementById('overall-progress-section');
+  if(!container || !c || !e) return;
+
+  const atrTarget = (c.targets?.act && c.targets?.red) ? c.targets.red / c.targets.act : (c.targets?.atr || 0);
+
+  const rows = e.metrics.map(m => {
+    const meta    = METRICS_DEF.find(x=>x.id===m.id);
+    const overall = m.id === 'atr' ? atrTarget : (c.targets?.[m.id] || 0);
+    const cumul   = m.cumul || 0;
+    const pct     = overall ? Math.round((cumul / overall) * 100) : null;
+    const barW    = pct !== null ? Math.min(100, pct) : 0;
+    const barCol  = pct === null ? 'var(--border)' : pct > 100 ? 'var(--amber)' : pct >= 76 ? 'var(--green)' : pct >= 51 ? 'var(--amber)' : 'var(--red)';
+
+    return `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-size:12px;font-weight:600;color:var(--teal);">${meta.name}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);">
+            ${fmtN(cumul, m.isRatio)} / ${overall ? fmtN(overall, m.isRatio) : '—'}
+            ${pct !== null ? `<span style="font-weight:700;color:${barCol};margin-left:6px;">${pct}%</span>` : ''}
+          </span>
+        </div>
+        <div style="background:var(--teal-light);border-radius:99px;height:8px;overflow:hidden;">
+          <div style="background:${barCol};height:100%;border-radius:99px;width:${barW}%;transition:width 0.5s ease;"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Campaign week progress bar
+  const weekPct = c.weeks ? Math.round((e.weekNum / c.weeks) * 100) : null;
+
+  container.innerHTML = `
+    <div style="background:var(--surface);border:1.5px solid var(--teal-border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);">
+      <div style="background:var(--teal-light);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--teal-border);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--teal);font-family:'DM Mono',monospace;">Overall Campaign Progress</span>
+          <span style="background:var(--surface2);border:1px solid var(--teal-border);color:var(--muted);font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;font-family:'DM Mono',monospace;">🔒 Internal only — not used for optimisation</span>
+        </div>
+        ${weekPct !== null ? `<span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);">Week ${e.weekNum} of ${c.weeks} (${weekPct}% through campaign)</span>` : ''}
+      </div>
+      <div style="padding:16px 16px 8px;">
+        ${rows}
+      </div>
+    </div>`;
+}
+
+function toggleCard(id) { document.getElementById('mb-'+id)?.classList.toggle('open'); }
+function toggleAction(mid,ai) {
+  const el=document.getElementById(`ai-${mid}-${ai}`);
+  const sel=el.classList.toggle('sel');
+  if(sel) state.selectedActions[mid].push(ai);
+  else state.selectedActions[mid]=state.selectedActions[mid].filter(i=>i!==ai);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════════
+function goExport() {
+  buildPreview();
+  document.getElementById('ws3').className='step-item act';
+  document.getElementById('ws3b').className='step-item act';
+  goScreen('export');
+}
+
+function buildSaviTableHTML(c, e, allWithCurrent) {
+  const TEAL='#224B50', TEAL_EST='#009999', GREEN_TOT='#55FEAD', ROW_ALT='#F6F6EE';
+  const ragC={green:{bg:'#d6f0e0',tx:'#1e7a50'},amber:{bg:'#fff3cd',tx:'#b86000'},red:{bg:'#fde8ea',tx:'#be1a2c'},none:{bg:'#f2efe8',tx:'#8c8474'}};
+
+  const weekCols = allWithCurrent.map(en=>
+    `<th style="background:${TEAL};color:white;font-size:10px;padding:6px 3px;text-align:center;min-width:50px;border:1px solid #1a3a3e;line-height:1.3;">
+      w/c<br>${en.weekDate?new Date(en.weekDate).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'}):'Wk '+(en.weekNum||'?')}
+    </th>`
+  ).join('');
+
+  const tableActiveMetrics = getActiveMetrics(c).filter(m=>!m.auto||m.id==='redval');
+  const metricRows = tableActiveMetrics.map((meta,mi)=>{
+    const overall=c.targets?.[meta.id]||0;
+    const weekVals=allWithCurrent.map(en=>{
+      const m=en.metrics?.find(x=>x.id===meta.id);
+      return m?m.actual:0;
+    });
+    const total=meta.isRatio?null:weekVals.reduce((s,v)=>s+v,0);
+
+    // Forecast to completion: cumulative + (avg per week × weeks remaining)
+    const weeksRecorded = allWithCurrent.length;
+    const weeksRemaining = c.weeks ? Math.max(0, c.weeks - weeksRecorded) : 0;
+    const avgPerWeek = (total !== null && weeksRecorded > 0) ? total / weeksRecorded : 0;
+    const forecast = (total !== null && !meta.isRatio)
+      ? Math.round(total + (avgPerWeek * weeksRemaining))
+      : null;
+
+    // RAG and % based on forecast vs overall target
+    const ragValue = (forecast !== null && overall) ? forecast : (meta.isRatio ? null : total);
+    const rag = (!meta.isRatio && overall) ? getRAG(ragValue, overall) : 'none';
+    const rc  = ragC[rag];
+    const forecastPct = (forecast !== null && overall) ? Math.round((forecast/overall)*100) : null;
+    const displayPct  = forecastPct !== null ? forecastPct
+      : (total !== null && overall) ? Math.round((total/overall)*100) : null;
+
+    const rowBg=mi%2===0?ROW_ALT:'white';
+
+    const weekCells=weekVals.map(v=>
+      `<td style="background:${rowBg};text-align:center;font-size:11px;padding:5px 3px;border:1px solid #e0dbd0;">${fmtN(v,meta.isRatio)}</td>`
+    ).join('');
+
+    const chosen=state.selectedActions?.[meta.id]||[];
+    const al=rag!=='none'?meta.actions[rag]:[];
+    const actionText=chosen.map(i=>al[i]?.t||'').filter(Boolean).join('; ');
+
+    return `<tr>
+      <td style="background:${rowBg};font-weight:700;font-size:11px;padding:6px 8px;border:1px solid #e0dbd0;">${meta.name}</td>
+      ${weekCells}
+      <td style="background:${GREEN_TOT};font-weight:700;text-align:center;font-size:11px;padding:5px 3px;border:1px solid #c8f8d8;">${total!==null?fmtN(total,meta.isRatio):'—'}</td>
+      <td style="text-align:center;font-size:11px;padding:5px 3px;border:1px solid #e0dbd0;font-weight:700;">${overall?fmtN(overall,meta.isRatio):'—'}</td>
+      <td style="background:${rc.bg};color:${rc.tx};font-weight:700;text-align:center;font-size:11px;padding:5px 3px;border:1px solid ${rc.bg};">${ragLabel(rag, displayPct).replace(/[🟢🟡🔴]/g,'').trim()}</td>
+      <td style="text-align:center;font-size:11px;padding:5px 3px;border:1px solid #e0dbd0;">
+        ${forecast!==null?`<div style="font-weight:700;">${fmtN(forecast,meta.isRatio)}</div><div style="font-size:9px;color:#888;">${displayPct!==null?displayPct+'% of target':''}</div>`:(displayPct!==null?displayPct+'%':'—')}
+      </td>
+    </tr>`;
+  }).join('');
+
+  const actCells=allWithCurrent.map(en=>{
+    const acts=[];
+    METRICS_DEF.forEach(meta=>{
+      const chosen=en.selectedActions?.[meta.id]||[];
+      const m2=en.metrics?.find(x=>x.id===meta.id);
+      const rag2=m2?getRAG(m2.actual,m2.weeklyTarget):'none';
+      const al=rag2!=='none'?meta.actions[rag2]:[];
+      chosen.forEach(ci=>{if(al[ci])acts.push(al[ci].t);});
+    });
+    return `<td style="font-size:9px;padding:4px 3px;border:1px solid #e0dbd0;color:#555;font-style:italic;">${acts[0]||''}</td>`;
+  }).join('');
+
+  return `<table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;">
+    <thead><tr>
+      <th style="background:${TEAL};color:white;font-size:11px;padding:7px 8px;text-align:left;border:1px solid #1a3a3e;min-width:130px;">Metric</th>
+      ${weekCols}
+      <th style="background:${TEAL};color:white;font-size:11px;padding:6px 4px;text-align:center;border:1px solid #1a3a3e;">Total</th>
+      <th style="background:${TEAL_EST};color:white;font-size:11px;padding:6px 4px;text-align:center;border:1px solid #007a7a;">Estimation</th>
+      <th style="background:${TEAL_EST};color:white;font-size:11px;padding:6px 4px;text-align:center;border:1px solid #007a7a;">RAG Status</th>
+      <th style="background:#f2efe8;font-size:11px;padding:6px 4px;text-align:center;border:1px solid #e0dbd0;">Forecast to End</th>
+    </tr></thead>
+    <tbody>
+      ${metricRows}
+      <tr>
+        <td style="font-size:10px;font-style:italic;padding:5px 8px;border:1px solid #e0dbd0;color:#555;">Optimisation Action (if applicable)</td>
+        ${actCells}
+        <td colspan="4" style="border:1px solid #e0dbd0;"></td>
+      </tr>
+    </tbody>
+  </table>`;
+}
+
+function buildPreview() {
+  const c=activeCampaign(), e=state.weeklyEntry;
+  if(!c||!e) return;
+  const TEAL='#224B50';
+  const allEntries=Object.values(c.weeklyData||{}).sort((a,b)=>new Date(a.weekDate)-new Date(b.weekDate));
+  const currentKey=e.weekDate||'__current__';
+  const allWithCurrent=[...allEntries.filter(x=>x.weekDate!==currentKey),e].sort((a,b)=>new Date(a.weekDate)-new Date(b.weekDate));
+  const tableHtml=buildSaviTableHTML(c,e,allWithCurrent);
+
+  const actionsHtml = (() => {
+    const ragC = {
+      green:{tx:'#1e7a50', bg:'#e6f4ed', border:'#9dd4b8'},
+      amber:{tx:'#b86000', bg:'#fff4e0', border:'#f0c068'},
+      red:  {tx:'#be1a2c', bg:'#fde8ea', border:'#f0a0a8'},
+      none: {tx:'#8c8474', bg:'#f2efe8', border:'#e0dbd0'}
+    };
+    const rows = METRICS_DEF.map(meta => {
+      const m = e.metrics.find(x=>x.id===meta.id);
+      const rag = m ? getRAG(m.actual, m.weeklyTarget) : 'none';
+      const chosen = state.selectedActions[meta.id]||[];
+      const al = rag!=='none' ? meta.actions[rag] : [];
+      const notes = document.getElementById('mn-'+meta.id)?.value||'';
+      if(!chosen.length && !notes) return '';
+      const rc = ragC[rag];
+      const ragTxt = ragLabel(rag, m ? Math.round((m.actual/m.weeklyTarget)*100) : null).replace(/[🟢🟡🔴]/g,'').trim();
+      return `
+        <tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #f0ede6;vertical-align:top;min-width:140px;">
+            <div style="font-weight:700;font-size:11px;color:#224B50;">${meta.name}</div>
+            <span style="display:inline-block;margin-top:3px;font-size:10px;font-weight:600;color:${rc.tx};background:${rc.bg};border:1px solid ${rc.border};padding:1px 7px;border-radius:10px;">${ragTxt}</span>
+          </td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f0ede6;vertical-align:top;">
+            ${chosen.map(i=>`<div style="font-size:11px;color:#333;padding:2px 0;display:flex;gap:6px;"><span style="color:${rc.tx};font-weight:700;flex-shrink:0;">→</span><span>${al[i]?.t||''}</span></div>`).join('')}
+            ${notes?`<div style="font-size:11px;color:#666;font-style:italic;margin-top:4px;padding-top:4px;border-top:1px dashed #e0dbd0;">Note: ${notes}</div>`:''}
+          </td>
+        </tr>`;
+    }).join('');
+    if(!rows) return '';
+    return `
+      <div style="margin-top:16px;">
+        <div style="background:#224B50;color:white;font-size:13px;font-weight:700;padding:8px 12px;">Optimisation Actions This Week</div>
+        <table style="width:100%;border-collapse:collapse;background:white;border:1px solid #e0dbd0;">
+          <thead><tr>
+            <th style="padding:6px 12px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8c8474;text-align:left;border-bottom:2px solid #e0dbd0;background:#f8f6f1;">Metric</th>
+            <th style="padding:6px 12px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8c8474;text-align:left;border-bottom:2px solid #e0dbd0;background:#f8f6f1;">Actions Being Taken</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  })();
+
+  document.getElementById('export-preview').innerHTML=`
+  <div style="font-family:Arial,sans-serif;max-width:960px;margin:0 auto;">
+    <div style="font-size:24px;font-weight:700;color:${TEAL};margin-bottom:4px;">${c.name}</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:11px;color:${TEAL};">
+      <tr>
+        <td style="width:150px;padding:2px 0;font-weight:700;">Campaign Offer:</td>
+        <td style="padding:2px 12px;">${c.offer||'—'}</td>
+        <td style="width:150px;padding:2px 0;font-weight:700;">Campaign Dates:</td>
+        <td style="padding:2px 12px;">${c.startDate?new Date(c.startDate).toLocaleDateString('en-GB'):''} ${c.weeks?'('+c.weeks+' weeks)':''}</td>
+      </tr>
+      <tr>
+        <td style="padding:2px 0;font-weight:700;">Campaign Retailers:</td>
+        <td style="padding:2px 12px;">${c.retailers||'—'}</td>
+        <td style="padding:2px 0;font-weight:700;">Campaign Limits:</td>
+        <td style="padding:2px 12px;">${c.targets?.req?Number(c.targets.req).toLocaleString():'—'}</td>
+      </tr>
+      <tr>
+        <td style="padding:2px 0;font-weight:700;vertical-align:top;">Campaign Objective:</td>
+        <td colspan="3" style="padding:2px 12px;">${c.objective||'—'}</td>
+      </tr>
+    </table>
+    <div style="background:${TEAL};color:white;font-size:15px;font-weight:700;padding:8px 12px;margin-bottom:0;">Weekly Performance</div>
+    <div style="overflow-x:auto;">${tableHtml}</div>
+    ${actionsHtml}
+    <div style="margin-top:16px;font-size:10px;color:#aaa;border-top:1px solid #f0ede6;padding-top:8px;">
+      Prepared by: savi Insights &amp; Analysis &nbsp;·&nbsp; Generated ${new Date().toLocaleDateString('en-GB')}<br>
+      <i>The information in this report is confidential and only to be used for the recipient's internal purposes.</i>
+    </div>
+  </div>`;
+}
+
+function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const c = activeCampaign(), e = state.weeklyEntry;
+  if(!c||!e) return;
+
+  const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'a4'});
+  const PW=841, PH=595, M=36, CW=PW-M*2;
+  let y=M;
+
+  const TEAL=[34,75,80], TEAL_EST=[0,153,153], GREEN_TOT=[85,254,173];
+  const ROW_ALT=[246,246,238], WHITE=[255,255,255];
+  const ragRGB={green:[30,122,80],amber:[184,96,0],red:[190,26,44],none:[140,132,116]};
+  const ragBgRGB={green:[214,240,224],amber:[255,243,205],red:[253,232,234],none:[242,239,232]};
+
+  const allEntries=Object.values(c.weeklyData||{}).sort((a,b)=>new Date(a.weekDate)-new Date(b.weekDate));
+  const currentKey=e.weekDate||'__current__';
+  const allWithCurrent=[...allEntries.filter(x=>x.weekDate!==currentKey),e].sort((a,b)=>new Date(a.weekDate)-new Date(b.weekDate));
+  const nWeeks=allWithCurrent.length;
+
+  // ── Header bar ─────────────────────────────────────────────
+  doc.setFillColor(...TEAL); doc.rect(0,0,PW,56,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(255,255,255);
+  doc.text(c.name||'Campaign', M, 34);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(200,220,220);
+  doc.text(`Weekly Performance Report  ·  ${c.client||''}  ·  ${c.offer||''}`, M, 48);
+  const dateStr=e.weekDate?new Date(e.weekDate).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}):'';
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(10);
+  doc.text(`${dateStr}${e.weekNum&&c.weeks?' · Week '+e.weekNum+' of '+c.weeks:''}`, PW-M, 38, {align:'right'});
+
+  y=70;
+
+  // ── Campaign details ────────────────────────────────────────
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...TEAL);
+  const details=[
+    ['Campaign Offer:', c.offer||'—',  'Campaign Dates:', (c.startDate?new Date(c.startDate).toLocaleDateString('en-GB'):'')+(c.weeks?' ('+c.weeks+' wks)':'')],
+    ['Campaign Retailers:', c.retailers||'—', 'Campaign Limits:', c.targets?.req?Number(c.targets.req).toLocaleString():'—'],
+  ];
+  details.forEach(([k1,v1,k2,v2])=>{
+    doc.setFont('helvetica','bold'); doc.text(k1,M,y); doc.setFont('helvetica','normal'); doc.text(v1,M+90,y);
+    doc.setFont('helvetica','bold'); doc.text(k2,M+280,y); doc.setFont('helvetica','normal'); doc.text(v2,M+370,y);
+    y+=13;
+  });
+  if(c.objective){
+    doc.setFont('helvetica','bold'); doc.text('Campaign Objective:',M,y);
+    doc.setFont('helvetica','normal');
+    const olines=doc.splitTextToSize(c.objective,CW-95);
+    doc.text(olines[0],M+115,y); y+=13;
+    if(olines[1]){ doc.text(olines[1],M+115,y); y+=13; }
+  }
+  y+=6;
+
+  // ── Section header ──────────────────────────────────────────
+  doc.setFillColor(...TEAL); doc.rect(M,y,CW,18,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(255,255,255);
+  doc.text('Weekly Performance', M+6, y+13); y+=18;
+
+  // ── Table layout ────────────────────────────────────────────
+  // Columns: Metric(fixed) | weeks(dynamic) | Total | Est | RAG | %
+  const METRIC_W=110;
+  const FIXED_COLS_W=10+12+22+12; // Total+Est+RAG+%
+  const availForWeeks=CW-METRIC_W-FIXED_COLS_W-56;
+  const WK_W=Math.max(28, Math.min(48, Math.floor(availForWeeks/Math.max(nWeeks,1))));
+  const TOT_W=38, EST_W=40, RAG_W=54, PCT_W=30;
+  const ROW_H=16;
+
+  // Column header row
+  doc.setFillColor(...TEAL); doc.rect(M,y,CW,18,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
+  let cx=M+2;
+  doc.text('Metric',cx,y+12); cx+=METRIC_W;
+  allWithCurrent.forEach(en=>{
+    const lbl=en.weekDate?new Date(en.weekDate).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit'}):'W'+(en.weekNum||'?');
+    doc.text(lbl,cx+WK_W/2,y+12,{align:'center'}); cx+=WK_W;
+  });
+  doc.text('Total',cx+TOT_W/2,y+12,{align:'center'}); cx+=TOT_W;
+  doc.setFillColor(...TEAL_EST); doc.rect(cx-2,y,EST_W+2,18,'F');
+  doc.setTextColor(255,255,255); doc.text('Est.',cx+EST_W/2,y+12,{align:'center'}); cx+=EST_W;
+  doc.rect(cx-2,y,RAG_W+2,18,'F');
+  doc.text('RAG',cx+RAG_W/2,y+12,{align:'center'}); cx+=RAG_W;
+  doc.setFillColor(242,239,232); doc.rect(cx-2,y,PCT_W+2,18,'F');
+  doc.setTextColor(80,70,60); doc.text('Forecast',cx+PCT_W/2,y+12,{align:'center'});
+  y+=18;
+
+  // Data rows
+  METRICS_DEF.forEach((meta,mi)=>{
+    const overall=c.targets?.[meta.id]||0;
+    const weekVals=allWithCurrent.map(en=>{
+      const m=en.metrics?.find(x=>x.id===meta.id);
+      return m?m.actual:0;
+    });
+    const total=meta.isRatio?null:weekVals.reduce((s,v)=>s+v,0);
+
+    // Forecast to completion: avg per week × weeks remaining + total to date
+    const weeksRecorded = allWithCurrent.length;
+    const weeksRemaining = c.weeks ? Math.max(0, c.weeks - weeksRecorded) : 0;
+    const avgPerWeek = (total !== null && weeksRecorded > 0) ? total / weeksRecorded : 0;
+    const forecast = (total !== null && !meta.isRatio)
+      ? Math.round(total + (avgPerWeek * weeksRemaining))
+      : null;
+
+    // RAG based on forecast vs overall target
+    const rag = (forecast !== null && overall) ? getRAG(forecast, overall) : 'none';
+    const forecastPct = (forecast !== null && overall) ? Math.round((forecast/overall)*100) : null;
+    const rowBg=mi%2===0?ROW_ALT:WHITE;
+
+    doc.setFillColor(...rowBg); doc.rect(M,y,CW,ROW_H,'F');
+
+    // light border
+    doc.setDrawColor(220,218,212); doc.rect(M,y,CW,ROW_H,'S');
+
+    cx=M+2;
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(24,22,15);
+    const mname=meta.name.replace('Activation \u2192 Redemption','Act\u2192Red');
+    doc.text(mname,cx,y+11); cx+=METRIC_W;
+
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(40,38,34);
+    weekVals.forEach(v=>{
+      doc.text(fmtN(v,meta.isRatio),cx+WK_W/2,y+11,{align:'center'}); cx+=WK_W;
+    });
+
+    // Total cell
+    doc.setFillColor(...GREEN_TOT); doc.rect(cx-1,y+1,TOT_W,ROW_H-2,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(24,22,15);
+    doc.text(total!==null?fmtN(total,meta.isRatio):'—', cx+TOT_W/2, y+11, {align:'center'});
+    cx+=TOT_W;
+
+    // Estimation
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(24,22,15);
+    doc.text(overall?fmtN(overall,meta.isRatio):'—', cx+EST_W/2, y+11, {align:'center'});
+    cx+=EST_W;
+
+    // RAG cell
+    doc.setFillColor(...ragBgRGB[rag]); doc.rect(cx-1,y+1,RAG_W,ROW_H-2,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...ragRGB[rag]);
+    const ragTxt={green:'On Track',amber:forecastPct&&forecastPct>115?'Over Target':'Needs Attention',red:'Off Track',none:'—'}[rag];
+    doc.text(ragTxt, cx+RAG_W/2, y+11, {align:'center'});
+    cx+=RAG_W;
+
+    // Forecast % cell
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(40,38,34);
+    const forecastTxt = forecast !== null ? `${fmtN(forecast,meta.isRatio)} (${forecastPct}%)` : '—';
+    doc.text(forecastTxt, cx+PCT_W/2, y+11, {align:'center'});
+
+    y+=ROW_H;
+  });
+
+  // Optimisation actions row
+  doc.setFillColor(255,255,255); doc.rect(M,y,CW,ROW_H,'F');
+  doc.setDrawColor(220,218,212); doc.rect(M,y,CW,ROW_H,'S');
+  doc.setFont('helvetica','italic'); doc.setFontSize(7); doc.setTextColor(120,110,100);
+  doc.text('Optimisation Action (if applicable)', M+2, y+11);
+  cx=M+METRIC_W+2;
+  allWithCurrent.forEach(en=>{
+    const acts=[];
+    METRICS_DEF.forEach(meta2=>{
+      const chosen2=en.selectedActions?.[meta2.id]||[];
+      const m2=en.metrics?.find(x=>x.id===meta2.id);
+      const r2=m2?getRAG(m2.actual,m2.weeklyTarget):'none';
+      const al2=r2!=='none'?meta2.actions[r2]:[];
+      chosen2.forEach(ci=>{if(al2[ci])acts.push(al2[ci].t.split(' ').slice(0,4).join(' '));});
+    });
+    if(acts[0]) doc.text(acts[0],cx,y+11,{maxWidth:WK_W-2});
+    cx+=WK_W;
+  });
+  y+=ROW_H+10;
+
+  // ── Optimisation Actions This Week ──────────────────────────
+  const actionItems = [];
+  getActiveMetrics(c).forEach(meta => {
+    const m = e.metrics.find(x=>x.id===meta.id);
+    const rag = m ? getRAG(m.actual, m.weeklyTarget) : 'none';
+    const chosen = state.selectedActions[meta.id]||[];
+    const al = (rag!=='none'&&meta.actions) ? (meta.actions[rag]||[]) : [];
+    const notes = document.getElementById('mn-'+meta.id)?.value||'';
+    if(!chosen.length && !notes) return;
+    chosen.forEach(i => {
+      if(al[i]) actionItems.push({ metric: meta.name.replace('Activation → Redemption','Act→Red'), action: al[i].t, rag, notes: '' });
+    });
+    if(notes) actionItems.push({ metric: meta.name.replace('Activation → Redemption','Act→Red'), action: notes, rag, notes: '', isNote: true });
+  });
+
+  if(actionItems.length > 0 && y < PH - 60) {
+    // Section header
+    doc.setFillColor(...TEAL);
+    doc.rect(M, y, CW, 16, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255,255,255);
+    doc.text('OPTIMISATION ACTIONS THIS WEEK', M+6, y+11);
+    y += 16;
+
+    // Column headers
+    const MNAME_W = 140, ACT_W = CW - MNAME_W;
+    doc.setFillColor(232,242,243); doc.rect(M, y, CW, 12, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(34,75,80);
+    doc.text('METRIC', M+4, y+9);
+    doc.text('ACTION BEING TAKEN', M+MNAME_W+4, y+9);
+    y += 12;
+
+    actionItems.forEach((item, idx) => {
+      const rc = ragRGB[item.rag] || ragRGB.none;
+      const rbg = ragBgRGB[item.rag] || ragBgRGB.none;
+      const rowH = 14;
+      if(y + rowH > PH - 20) return;
+
+      // Row bg
+      doc.setFillColor(idx%2===0?255:248,idx%2===0?255:250,idx%2===0?255:248);
+      doc.rect(M, y, CW, rowH, 'F');
+      doc.setDrawColor(220,218,212); doc.rect(M, y, CW, rowH, 'S');
+
+      // RAG colour bar
+      doc.setFillColor(...rbg); doc.rect(M, y, 3, rowH, 'F');
+
+      // Metric name
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...rc);
+      doc.text(item.metric, M+6, y+9);
+
+      // Action text
+      doc.setFont(item.isNote?'helvetica-italic':'helvetica','normal');
+      doc.setFontSize(7); doc.setTextColor(40,38,34);
+      const actionLines = doc.splitTextToSize((item.isNote?'Note: ':'')+item.action, ACT_W-8);
+      doc.text(actionLines[0], M+MNAME_W+4, y+9);
+
+      y += rowH;
+    });
+    y += 6;
+  }
+
+  // ── Footer ──────────────────────────────────────────────────
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(180,172,156);
+  doc.text('Prepared by: savi Insights & Analysis  ·  '+new Date().toLocaleDateString('en-GB'), PW/2, PH-14, {align:'center'});
+
+  saveWeekToHistory();
+  const fname=`${(c.name||'campaign').replace(/\s+/g,'-').toLowerCase()}-wk${e.weekNum||''}-${e.weekDate||''}.pdf`;
+  doc.save(fname);
+  toast('PDF downloaded \u2713');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════════════
+async function saveWeekToHistory() {
+  const id = state.activeCampaignId;
+  if(!id||!state.weeklyEntry) return;
+  if(!state.campaigns[id].weeklyData) state.campaigns[id].weeklyData={};
+  const key = state.weeklyEntry.weekDate || Date.now().toString();
+  state.campaigns[id].weeklyData[key] = { ...state.weeklyEntry, savedAt: new Date().toISOString(), selectedActions:{...state.selectedActions} };
+  await save();
+  renderSidebar();
+  renderDashboard();
+}
+
+function renderHistory() {
+  const c = activeCampaign();
+  const container = document.getElementById('history-content');
+  if(!c){ container.innerHTML='<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">No campaign selected</div></div>'; return; }
+
+  const entries = Object.values(c.weeklyData||{}).sort((a,b)=>new Date(a.weekDate)-new Date(b.weekDate));
+  if(!entries.length){
+    container.innerHTML=`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">No weeks recorded yet</div><p style="font-size:14px;color:var(--text-muted);margin-top:6px;">Weeks appear here once you download a client report</p></div>`;
+    return;
+  }
+
+  // Trend bars
+  let trendsHtml = '<div class="trend-grid">';
+  METRICS_DEF.forEach(meta=>{
+    const pts = entries.map(e=>{
+      const m=e.metrics?.find(x=>x.id===meta.id);
+      if(!m||!m.weeklyTarget) return null;
+      return {week:e.weekDate||e.weekNum,wk:Math.round((m.actual/m.weeklyTarget)*100),cu:m.cumul&&m.cumulTarget?Math.round((m.cumul/m.cumulTarget)*100):null};
+    }).filter(Boolean);
+    if(!pts.length) return;
+
+    const bars = pts.map(p=>{
+      const h=Math.min(100,Math.max(4,p.wk));
+      const col=p.wk>=90?'var(--green)':p.wk>=75?'var(--amber)':'var(--red)';
+      return `<div style="flex:1;background:${col};height:${h}%;border-radius:3px 3px 0 0;min-height:4px;opacity:0.82;cursor:default;transition:opacity .15s;" title="w/c ${p.week}: ${p.wk}% weekly${p.cu!==null?', '+p.cu+'% cum':''}" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.82"></div>`;
+    }).join('');
+
+    const latest=pts[pts.length-1], prev=pts[pts.length-2];
+    const delta=prev?latest.wk-prev.wk:null;
+    const dHtml=delta!==null?`<span style="font-size:10px;color:${delta>=0?'var(--green)':'var(--red)'};">${delta>=0?'▲':'▼'} ${Math.abs(delta)}pp</span>`:'';
+
+    trendsHtml+=`
+      <div class="trend-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div><div class="trend-title">${meta.name}</div><div class="trend-sub">% of weekly target</div></div>
+          <div style="text-align:right;"><div style="font-family:'DM Mono',monospace;font-size:17px;font-weight:500;">${latest.wk}%</div>${dHtml}</div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:3px;height:64px;padding-top:6px;">${bars}</div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-top:3px;"><span>${pts[0]?.week||''}</span><span>${pts[pts.length-1]?.week||''}</span></div>
+      </div>`;
+  });
+  trendsHtml+='</div>';
+
+  const rows = [...entries].reverse().map((e,i)=>{
+    const pills=(e.metrics||[]).map(m=>{
+      const rag=getRAG(m.actual,m.weeklyTarget);
+      const mn=METRICS_DEF.find(x=>x.id===m.id)?.name.split(' ')[1]||m.id;
+      return `<span class="rag-badge rb-${rag}" style="font-size:10px;padding:2px 7px;">${mn} ${ragLabel(rag).split(' ')[0]}</span>`;
+    }).join('');
+    const ds=e.weekDate?new Date(e.weekDate).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
+    return `<div class="history-row"><div><div style="font-weight:600;font-size:13px;">w/c ${ds}${e.weekNum?' · Week '+e.weekNum:''}</div>${e.notes?`<div class="hw">${e.notes}</div>`:''}</div><div class="hpills">${pills}</div><div style="display:flex;gap:6px;flex-shrink:0;"><button style="background:var(--teal-light);border:1px solid var(--teal-border);color:var(--teal);cursor:pointer;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px;" onclick="goScreen('weekly');setTimeout(()=>loadSavedWeekIntoForm('${e.weekDate||''}'),100)">✏ Edit</button><button style="background:none;border:1px solid var(--red-border);color:var(--red);cursor:pointer;font-size:11px;font-weight:600;padding:4px 8px;border-radius:5px;" onclick="deleteWeekEntry('${e.weekDate||e.weekNum}')" title="Delete">✕</button></div></div>`;
+  }).join('');
+
+  container.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div><div style="font-family:'Instrument Serif',serif;font-size:18px;">${c.name}</div><div style="font-size:12px;color:var(--text-muted);">${entries.length} week${entries.length!==1?'s':''} recorded · hover bars for details</div></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px;">${trendsHtml}</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;">${rows}</div>`;
+}
+
+async function deleteWeekEntry(key) {
+  const id=state.activeCampaignId; if(!id) return;
+  delete state.campaigns[id].weeklyData[key];
+  await save(); renderHistory(); toast('Week removed');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXCEL EXPORT
+// ═══════════════════════════════════════════════════════════════
+function buildExcelHTMLTable(c, allWithCurrent) {
+  const TEAL='#224B50', TEAL_EST='#009999', GREEN_TOT='#55FEAD';
+  const ROW_ALT='#F6F6EE';
+  const ragBg={green:'#d6f0e0',amber:'#fff3cd',red:'#fde8ea',none:'#f2efe8'};
+  const ragTx={green:'#1e7a50',amber:'#b86000',red:'#be1a2c',none:'#8c8474'};
+
+  let html = '<table border="1" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:11px;">';
+
+  // Campaign header rows
+  html += `<tr><td colspan="${3+allWithCurrent.length}" style="font-size:20px;font-weight:700;color:${TEAL};padding:8px;border:none;">${c.name||''}</td></tr>`;
+  const dets = [
+    ['Campaign Offer:', c.offer||'—', 'Campaign Dates:', (c.startDate?new Date(c.startDate).toLocaleDateString('en-GB'):'')+' '+(c.weeks?'('+c.weeks+' wks)':'')],
+    ['Campaign Retailers:', c.retailers||'—', 'Campaign Limits:', c.targets?.req?Number(c.targets.req).toLocaleString():'—'],
+    ['Campaign Objective:', c.objective||'—', '', ''],
+  ];
+  dets.forEach(([k1,v1,k2,v2])=>{
+    html+=`<tr>
+      <td style="font-weight:700;color:${TEAL};padding:3px 6px;border:none;">${k1}</td>
+      <td style="color:${TEAL};padding:3px 6px;border:none;" colspan="2">${v1}</td>
+      <td style="font-weight:700;color:${TEAL};padding:3px 6px;border:none;">${k2}</td>
+      <td style="color:${TEAL};padding:3px 6px;border:none;" colspan="${allWithCurrent.length}">${v2}</td>
+    </tr>`;
+  });
+
+  // Blank row + section header
+  html += `<tr><td colspan="${4+allWithCurrent.length}" style="padding:4px;border:none;"></td></tr>`;
+  html += `<tr><td colspan="${4+allWithCurrent.length}" style="background:${TEAL};color:white;font-size:14px;font-weight:700;padding:7px 10px;">Weekly Performance</td></tr>`;
+
+  // Column headers
+  const weekHeaders = allWithCurrent.map(en=>
+    `<th style="background:${TEAL};color:white;padding:6px 4px;text-align:center;min-width:55px;white-space:pre-line;">w/c\n${en.weekDate?new Date(en.weekDate).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'}):'Wk'+(en.weekNum||'?')}</th>`
+  ).join('');
+  html += `<tr>
+    <th style="background:${TEAL};color:white;padding:7px 8px;text-align:left;min-width:140px;">Metric</th>
+    ${weekHeaders}
+    <th style="background:${TEAL};color:white;padding:6px 4px;text-align:center;">Total</th>
+    <th style="background:${TEAL_EST};color:white;padding:6px 4px;text-align:center;">Estimation</th>
+    <th style="background:${TEAL_EST};color:white;padding:6px 4px;text-align:center;">RAG Status</th>
+    <th style="background:#e8e4dc;padding:6px 4px;text-align:center;">% vs Target</th>
+  </tr>`;
+
+  // Metric rows
+  METRICS_DEF.forEach((meta,mi)=>{
+    const overall=c.targets?.[meta.id]||0;
+    const weekVals=allWithCurrent.map(en=>{
+      const m=en.metrics?.find(x=>x.id===meta.id);
+      return m?m.actual:0;
+    });
+    const total=meta.isRatio?null:weekVals.reduce((s,v)=>s+v,0);
+    // RAG from latest week's actual vs weekly target
+    const latestEn=allWithCurrent[allWithCurrent.length-1];
+    const latestM=latestEn?.metrics?.find(x=>x.id===meta.id);
+    const wkTarget=latestM?.weeklyTarget||0;
+    const wkActual=latestM?.actual||0;
+    const rag=wkTarget?getRAG(wkActual,wkTarget):'none';
+    const wkPct=wkTarget?Math.round((wkActual/wkTarget)*100):null;
+    const totalPct=(total!==null&&overall)?Math.round((total/overall)*100):null;
+    const rowBg=mi%2===0?ROW_ALT:'#FFFFFF';
+
+    const weekCells=weekVals.map(v=>
+      `<td style="background:${rowBg};text-align:center;padding:5px 4px;">${fmtN(v,meta.isRatio)}</td>`
+    ).join('');
+
+    html+=`<tr>
+      <td style="background:${rowBg};font-weight:700;padding:6px 8px;">${meta.name}</td>
+      ${weekCells}
+      <td style="background:${GREEN_TOT};font-weight:700;text-align:center;padding:5px 4px;">${total!==null?fmtN(total,meta.isRatio):'—'}</td>
+      <td style="font-weight:700;text-align:center;padding:5px 4px;">${overall?fmtN(overall,meta.isRatio):'—'}</td>
+      <td style="background:${ragBg[rag]};color:${ragTx[rag]};font-weight:700;text-align:center;padding:5px 4px;">${wkPct!==null&&wkPct>115?'Over Target':wkPct!==null&&wkPct>=76?'On Track':wkPct!==null&&wkPct>=51?'Needs Attention':rag==='red'?'Off Track':'—'}</td>
+      <td style="text-align:center;padding:5px 4px;">${wkPct!==null?wkPct+'%':totalPct!==null?totalPct+'%':'—'}</td>
+    </tr>`;
+  });
+
+  // Optimisation actions row
+  const actCells=allWithCurrent.map(en=>{
+    const acts=[];
+    METRICS_DEF.forEach(meta=>{
+      const chosen=en.selectedActions?.[meta.id]||[];
+      const m2=en.metrics?.find(x=>x.id===meta.id);
+      const r2=m2?getRAG(m2.actual,m2.weeklyTarget):'none';
+      const al=r2!=='none'?meta.actions[r2]:[];
+      chosen.forEach(ci=>{if(al[ci])acts.push(al[ci].t);});
+    });
+    return `<td style="font-size:9px;font-style:italic;color:#555;padding:4px;">${acts[0]||''}</td>`;
+  }).join('');
+  html+=`<tr>
+    <td style="font-style:italic;font-size:10px;color:#555;padding:5px 8px;">Optimisation Action (if applicable)</td>
+    ${actCells}
+    <td colspan="4"></td>
+  </tr>`;
+
+  // Footer
+  html+=`<tr><td colspan="${4+allWithCurrent.length}" style="padding:4px;border:none;"></td></tr>`;
+  html+=`<tr><td colspan="${4+allWithCurrent.length}" style="font-size:9px;color:#888;font-style:italic;padding:3px 8px;border:none;">Prepared by: savi Insights &amp; Analysis · please contact us at insights@saviuk.co.uk</td></tr>`;
+  html+=`<tr><td colspan="${4+allWithCurrent.length}" style="font-size:9px;color:#888;font-style:italic;padding:3px 8px;border:none;">The information in this report is confidential and only to be used for the recipient's internal purposes.</td></tr>`;
+  html+='</table>';
+  return html;
+}
+
+function downloadExcel() {
+  const c = activeCampaign();
+  const e = state.weeklyEntry;
+  if(!c||!e) { toast('No data to export'); return; }
+
+  const wb = XLSX.utils.book_new();
+  const dateStr = e.weekDate ? new Date(e.weekDate).toLocaleDateString('en-GB') : '';
+
+  // ── Sheet 1: Weekly Report ──────────────────────────────────
+  const ragColors = { green:'FF1e7a50', amber:'FFb86000', red:'FFbe1a2c', none:'FF8c8474' };
+  const ragBg     = { green:'FFeaf5ef', amber:'FFfff5e0', red:'FFfdeced', none:'FFf2efe8' };
+
+  const ws1Data = [];
+
+  // Title rows
+  ws1Data.push([`${c.name} — Weekly Performance Report`]);
+  ws1Data.push([`Client: ${c.client||'—'}   |   Offer: ${c.offer||'—'}   |   Week commencing: ${dateStr}   |   ${e.weekNum&&c.weeks?`Week ${e.weekNum} of ${c.weeks}`:''}`]);
+  if(c.objective) ws1Data.push([`Objective: ${c.objective}`]);
+  ws1Data.push([]);
+
+  // Column headers
+  ws1Data.push(['Metric', 'This Week Actual', 'Weekly Target', '% of Weekly Target', 'Cumulative Actual', 'Cumulative Target', '% Cumulative', 'RAG Status', 'Selected Actions', 'Notes']);
+
+  e.metrics.forEach(m => {
+    const meta    = METRICS_DEF.find(x=>x.id===m.id);
+    const rag     = getRAG(m.actual, m.weeklyTarget);
+    const wPct    = m.weeklyTarget ? Math.round((m.actual/m.weeklyTarget)*100) : null;
+    const cPct    = m.cumulTarget  ? Math.round((m.cumul/m.cumulTarget)*100)   : null;
+    const chosen  = state.selectedActions[m.id]||[];
+    const al      = rag!=='none' ? meta.actions[rag] : [];
+    const actions = chosen.map(i=>al[i]?.t||'').filter(Boolean).join(' | ');
+    const notes   = document.getElementById('mn-'+m.id)?.value||'';
+    const ragTxt  = { green:'On Track', amber:'Needs Attention', red:'Off Track', none:'No Target' }[rag];
+
+    ws1Data.push([
+      meta.name,
+      m.isRatio ? +(m.actual*100).toFixed(1) : m.actual,
+      m.isRatio ? +(m.weeklyTarget*100).toFixed(1) : Math.round(m.weeklyTarget)||0,
+      wPct !== null ? wPct/100 : '',
+      m.isRatio ? +(m.cumul*100).toFixed(1) : m.cumul||0,
+      m.isRatio ? +(m.cumulTarget*100).toFixed(1) : Math.round(m.cumulTarget)||0,
+      cPct !== null ? cPct/100 : '',
+      ragTxt,
+      actions,
+      notes
+    ]);
+  });
+
+  const ws1 = XLSX.utils.aoa_to_sheet(ws1Data);
+
+  // Column widths
+  ws1['!cols'] = [
+    {wch:28},{wch:16},{wch:16},{wch:18},{wch:16},{wch:16},{wch:16},{wch:18},{wch:60},{wch:40}
+  ];
+
+  // Format % columns
+  const titleRows = c.objective ? 4 : 3;
+  const headerRow = titleRows + 1; // 1-indexed
+  const dataStart = headerRow + 1;
+
+  e.metrics.forEach((m, i) => {
+    const r = dataStart + i;
+    // % of weekly target col D
+    const cellD = XLSX.utils.encode_cell({r: r-1, c: 3});
+    const cellG = XLSX.utils.encode_cell({r: r-1, c: 6});
+    if(ws1[cellD]) ws1[cellD].z = '0%';
+    if(ws1[cellG]) ws1[cellG].z = '0%';
+  });
+
+  XLSX.utils.book_append_sheet(wb, ws1, 'This Week');
+
+  // ── Sheet 2: Savi-style Weekly Performance Table (styled) ───
+  const allEntries = Object.values(c.weeklyData||{}).sort((a,b)=>new Date(a.weekDate)-new Date(b.weekDate));
+  const currentKey = e.weekDate || '__current__';
+  const allWithCurrent = [...allEntries.filter(x=>x.weekDate!==currentKey), e]
+    .sort((a,b)=>new Date(a.weekDate)-new Date(b.weekDate));
+
+  {
+    // ── Colours matching the original report exactly ──────────
+    const TEAL      = 'FF224B50'; // dark teal — title, headers, label text
+    const TEAL_HDR  = 'FF224B50'; // section header bg
+    const TEAL_EST  = 'FF009999'; // estimation/RAG header bg
+    const GREEN_TOT = 'FF55FEAD'; // total column bg
+    const ROW_ALT   = 'FFF6F6EE'; // alternating row bg
+    const WHITE     = 'FFFFFFFF';
+    const RAG_GREEN_BG = 'FF70AD47';
+    const RAG_AMBER_BG = 'FFFFC000';
+    const RAG_RED_BG   = 'FFFF0000';
+
+    const mkFill = hex => ({ patternType:'solid', fgColor:{ rgb: hex } });
+    const mkFont = (hex, bold=false, sz=11) => ({ color:{ rgb: hex }, bold, sz, name:'Arial' });
+
+    // Build workbook using XLSX with cell-level styling (xlsx-style compatible approach)
+    // We use a plain aoa then apply cell styles via direct cell manipulation
+    const nWeeks = allWithCurrent.length;
+    // Column indices: B=1(metric), C..=weeks, then Total, Estimation, RAG, %vsTarget
+    const COL_METRIC = 1;  // col B (1-indexed in display, 0-indexed in array)
+    const COL_WEEKS_START = 2;
+    const COL_TOTAL = COL_WEEKS_START + nWeeks;
+    const COL_EST   = COL_TOTAL + 1;
+    const COL_RAG   = COL_TOTAL + 2;
+    const COL_PCT   = COL_TOTAL + 3;
+    const TOTAL_COLS = COL_PCT + 1;
+
+    // Row indices (0-based)
+    const ROW_TITLE    = 0;
+    const ROW_OFFER    = 1;
+    const ROW_DATES    = 2;
+    const ROW_RETAIL   = 3;
+    const ROW_LIMITS   = 4;
+    const ROW_OBJ      = 5;
+    const ROW_BLANK    = 6;
+    const ROW_SEC_HDR  = 7;
+    const ROW_COL_HDR  = 8;
+    const ROW_DATA_START = 9;
+
+    // Build data array
+    const aoa = [];
+    const blank = () => new Array(TOTAL_COLS).fill('');
+
+    // Row 0: Title
+    const rTitle = blank(); rTitle[COL_METRIC] = c.name || 'Campaign Report'; aoa.push(rTitle);
+    // Rows 1-5: Campaign details
+    const details = [
+      ['Campaign Offer:', c.offer||''],
+      ['Campaign Dates:', `${c.startDate ? new Date(c.startDate).toLocaleDateString('en-GB') : ''}${c.weeks?' – ('+c.weeks+' weeks)':''}`],
+      ['Campaign Retailers:', c.retailers||''],
+      ['Campaign Limits:', c.targets?.req ? c.targets.req.toLocaleString() : ''],
+      ['Campaign Objective:', c.objective||''],
+    ];
+    details.forEach(([k,v]) => { const r=blank(); r[COL_METRIC]=k; r[COL_METRIC+1]=v; aoa.push(r); });
+    aoa.push(blank()); // blank row
+
+    // Row 7: Section header "Weekly Performance"
+    const rSecHdr = blank(); rSecHdr[COL_METRIC] = 'Weekly Performance'; aoa.push(rSecHdr);
+
+    // Row 8: Column headers
+    const rColHdr = blank();
+    rColHdr[COL_METRIC] = 'Metric';
+    allWithCurrent.forEach((en, i) => {
+      rColHdr[COL_WEEKS_START + i] = en.weekDate
+        ? 'w/c\n' + new Date(en.weekDate).toLocaleDateString('en-GB')
+        : `Week ${en.weekNum||'?'}`;
+    });
+    rColHdr[COL_TOTAL] = 'Total';
+    rColHdr[COL_EST]   = 'Estimation';
+    rColHdr[COL_RAG]   = 'RAG Status';
+    rColHdr[COL_PCT]   = '% vs Target';
+    aoa.push(rColHdr);
+
+    // Rows 9+: Metric data rows
+    const metricRows = {}; // id -> row index
+    METRICS_DEF.forEach((meta, mi) => {
+      const rowIdx = ROW_DATA_START + mi;
+      metricRows[meta.id] = rowIdx;
+      const overall = c.targets?.[meta.id] || 0;
+      const r = blank();
+      r[COL_METRIC] = meta.name;
+      const weekVals = allWithCurrent.map(en => {
+        const m = en.metrics?.find(x=>x.id===meta.id);
+        return m ? (meta.isRatio ? +(m.actual*100).toFixed(2)/100 : m.actual) : 0;
+      });
+      weekVals.forEach((v,i) => r[COL_WEEKS_START+i] = v);
+      const total = meta.isRatio ? '' : weekVals.reduce((s,v)=>s+v,0);
+      r[COL_TOTAL] = total;
+      r[COL_EST]   = overall;
+      // RAG computed from total vs overall
+      const rag = (!meta.isRatio && overall) ? getRAG(total, overall) : 'none';
+      r[COL_RAG]   = {green:'🟢 On Track', amber:'🟡 Needs Attention', red:'🔴 Off Track', none:'—'}[rag];
+      r[COL_PCT]   = (!meta.isRatio && overall) ? total/overall : '';
+      aoa.push(r);
+    });
+
+    // Optimisation actions row
+    const rAct = blank();
+    rAct[COL_METRIC] = 'Optimisation Action (if applicable)';
+    allWithCurrent.forEach((en, i) => {
+      const acts = [];
+      METRICS_DEF.forEach(meta => {
+        const chosen = en.selectedActions?.[meta.id]||[];
+        const m2 = en.metrics?.find(x=>x.id===meta.id);
+        const rag2 = m2 ? getRAG(m2.actual, m2.weeklyTarget) : 'none';
+        const al = rag2!=='none' ? meta.actions[rag2] : [];
+        chosen.forEach(ci => { if(al[ci]) acts.push(al[ci].t); });
+      });
+      rAct[COL_WEEKS_START+i] = acts.join('; ')||'';
+    });
+    aoa.push(rAct);
+
+    // Footer
+    aoa.push(blank());
+    const rFoot1 = blank(); rFoot1[COL_METRIC]='Prepared by: savi Insights & Analysis,  please contact us at insights@saviuk.co.uk'; aoa.push(rFoot1);
+    const rFoot2 = blank(); rFoot2[COL_METRIC]='The information in this report is confidential and only to be used for the recipient\'s internal purposes, not to be disclosed to any third party without prior written consent from savi.'; aoa.push(rFoot2);
+
+    const wsPT = XLSX.utils.aoa_to_sheet(aoa);
+
+    // ── Apply cell styles ─────────────────────────────────────
+    function sc(r,c) { return XLSX.utils.encode_cell({r,c}); }
+    function styleCell(addr, fill, font, numFmt, align) {
+      if(!wsPT[addr]) wsPT[addr] = {t:'s', v:''};
+      wsPT[addr].s = {};
+      if(fill) wsPT[addr].s.fill = { patternType:'solid', fgColor:{rgb:fill} };
+      if(font) wsPT[addr].s.font = { ...font, name:'Arial' };
+      if(numFmt) wsPT[addr].s.numFmt = numFmt;
+      if(align) wsPT[addr].s.alignment = align;
+    }
+    function styleCellBorder(addr, sides) {
+      if(!wsPT[addr]) wsPT[addr] = {t:'s',v:''};
+      if(!wsPT[addr].s) wsPT[addr].s={};
+      wsPT[addr].s.border = {};
+      const bStyle = { style:'thin', color:{rgb:'FFB0B0B0'} };
+      if(sides.includes('t')) wsPT[addr].s.border.top=bStyle;
+      if(sides.includes('b')) wsPT[addr].s.border.bottom=bStyle;
+      if(sides.includes('l')) wsPT[addr].s.border.left=bStyle;
+      if(sides.includes('r')) wsPT[addr].s.border.right=bStyle;
+    }
+
+    const centreWrap = { horizontal:'center', vertical:'center', wrapText:true };
+    const leftWrap   = { horizontal:'left',   vertical:'center', wrapText:true };
+
+    // Title row
+    const titleCell = sc(ROW_TITLE, COL_METRIC);
+    if(!wsPT[titleCell]) wsPT[titleCell]={t:'s',v:c.name||''};
+    wsPT[titleCell].s = { font:{ color:{rgb:TEAL}, bold:true, sz:22, name:'Arial' }, alignment:leftWrap };
+
+    // Campaign detail rows (labels bold teal, values normal teal)
+    for(let dr=1;dr<=5;dr++){
+      const lc=sc(dr,COL_METRIC), vc=sc(dr,COL_METRIC+1);
+      if(wsPT[lc]) wsPT[lc].s={ font:{color:{rgb:TEAL},bold:false,sz:11,name:'Arial'}, alignment:leftWrap };
+      if(wsPT[vc]) wsPT[vc].s={ font:{color:{rgb:TEAL},bold:false,sz:11,name:'Arial'}, alignment:leftWrap };
+    }
+
+    // Section header row "Weekly Performance"
+    for(let col=COL_METRIC;col<TOTAL_COLS;col++){
+      const addr=sc(ROW_SEC_HDR,col);
+      if(!wsPT[addr]) wsPT[addr]={t:'s',v:''};
+      wsPT[addr].s={ fill:{patternType:'solid',fgColor:{rgb:TEAL_HDR}}, font:{color:{rgb:'FFFFFFFF'},bold:true,sz:16,name:'Arial'}, alignment:leftWrap };
+    }
+
+    // Column header row
+    for(let col=COL_METRIC;col<TOTAL_COLS;col++){
+      const addr=sc(ROW_COL_HDR,col);
+      if(!wsPT[addr]) wsPT[addr]={t:'s',v:''};
+      const isEstOrRag = col===COL_EST||col===COL_RAG;
+      const bg = isEstOrRag ? TEAL_EST : TEAL_HDR;
+      const bold = col===COL_METRIC||col===COL_TOTAL||isEstOrRag;
+      wsPT[addr].s={ fill:{patternType:'solid',fgColor:{rgb:bg}}, font:{color:{rgb:'FFFFFFFF'},bold,sz:11,name:'Arial'}, alignment:centreWrap };
+    }
+
+    // Data rows
+    METRICS_DEF.forEach((meta, mi) => {
+      const rowIdx = ROW_DATA_START + mi;
+      const overall = c.targets?.[meta.id]||0;
+      const weekVals = allWithCurrent.map(en=>{
+        const m=en.metrics?.find(x=>x.id===meta.id);
+        return m?(meta.isRatio?+(m.actual*100).toFixed(2)/100:m.actual):0;
+      });
+      const total = meta.isRatio?null:weekVals.reduce((s,v)=>s+v,0);
+      const rag = (!meta.isRatio&&overall)?getRAG(total,overall):'none';
+      const useAltBg = mi%2===0;
+
+      for(let col=COL_METRIC;col<TOTAL_COLS;col++){
+        const addr=sc(rowIdx,col);
+        if(!wsPT[addr]) wsPT[addr]={t:'s',v:''};
+        if(!wsPT[addr].s) wsPT[addr].s={};
+
+        let bg, font, numFmt, align;
+
+        if(col===COL_METRIC){
+          bg=useAltBg?ROW_ALT:WHITE;
+          font={color:{rgb:'FF000000'},bold:true,sz:12,name:'Arial'};
+          align=leftWrap;
+        } else if(col===COL_TOTAL){
+          bg=GREEN_TOT;
+          font={color:{rgb:'FF000000'},bold:true,sz:12,name:'Arial'};
+          align=centreWrap;
+        } else if(col===COL_EST){
+          font={color:{rgb:'FF000000'},bold:true,sz:11,name:'Arial'};
+          align=centreWrap;
+        } else if(col===COL_RAG){
+          const ragBg={green:RAG_GREEN_BG,amber:RAG_AMBER_BG,red:RAG_RED_BG,none:WHITE}[rag];
+          bg=ragBg;
+          font={color:{rgb:'FFFFFFFF'},bold:true,sz:11,name:'Arial'};
+          align=centreWrap;
+        } else if(col===COL_PCT){
+          numFmt='0%';
+          align=centreWrap;
+          font={sz:11,name:'Arial'};
+        } else {
+          // weekly data cols
+          bg=useAltBg?ROW_ALT:WHITE;
+          font={sz:11,name:'Arial'};
+          align=centreWrap;
+          if(meta.isRatio) numFmt='0.0%';
+        }
+
+        wsPT[addr].s.fill   = bg ? {patternType:'solid',fgColor:{rgb:bg}} : undefined;
+        wsPT[addr].s.font   = font;
+        wsPT[addr].s.alignment = align||centreWrap;
+        if(numFmt) wsPT[addr].s.numFmt = numFmt;
+        // light border
+        wsPT[addr].s.border = { top:{style:'thin',color:{rgb:'FFD0D0D0'}}, bottom:{style:'thin',color:{rgb:'FFD0D0D0'}}, left:{style:'thin',color:{rgb:'FFD0D0D0'}}, right:{style:'thin',color:{rgb:'FFD0D0D0'}} };
+      }
+    });
+
+    // Optimisation row
+    const actRowIdx = ROW_DATA_START + METRICS_DEF.length;
+    const actAddr = sc(actRowIdx, COL_METRIC);
+    if(wsPT[actAddr]) wsPT[actAddr].s={ font:{bold:false,sz:10,name:'Arial',italic:true}, alignment:leftWrap };
+
+    // Footer rows
+    [actRowIdx+2, actRowIdx+3].forEach(ri=>{
+      const addr=sc(ri,COL_METRIC);
+      if(wsPT[addr]) wsPT[addr].s={ font:{color:{rgb:'FF888888'},sz:9,italic:true,name:'Arial'}, alignment:leftWrap };
+    });
+
+    // ── Merges: title spans full width, section header spans full width ──
+    if(!wsPT['!merges']) wsPT['!merges']=[];
+    wsPT['!merges'].push(
+      {s:{r:ROW_TITLE,c:COL_METRIC},    e:{r:ROW_TITLE,    c:TOTAL_COLS-1}},
+      {s:{r:ROW_OBJ,  c:COL_METRIC+1},  e:{r:ROW_OBJ,      c:TOTAL_COLS-1}},
+      {s:{r:ROW_SEC_HDR,c:COL_METRIC},  e:{r:ROW_SEC_HDR,  c:TOTAL_COLS-1}},
+      {s:{r:actRowIdx+2,c:COL_METRIC},  e:{r:actRowIdx+2,  c:TOTAL_COLS-1}},
+      {s:{r:actRowIdx+3,c:COL_METRIC},  e:{r:actRowIdx+3,  c:TOTAL_COLS-1}}
+    );
+
+    // ── Column widths ──────────────────────────────────────────
+    wsPT['!cols'] = [
+      {wch:2}, // col A empty
+      {wch:32}, // Metric
+      ...allWithCurrent.map(()=>({wch:11})),
+      {wch:10}, // Total
+      {wch:13}, // Estimation
+      {wch:20}, // RAG
+      {wch:13}  // % vs Target
+    ];
+
+    // ── Row heights ────────────────────────────────────────────
+    wsPT['!rows'] = [];
+    wsPT['!rows'][ROW_TITLE]   = {hpt:36};
+    wsPT['!rows'][ROW_SEC_HDR] = {hpt:28};
+    wsPT['!rows'][ROW_COL_HDR] = {hpt:36};
+    for(let mi=0;mi<METRICS_DEF.length;mi++) wsPT['!rows'][ROW_DATA_START+mi]={hpt:22};
+
+    XLSX.utils.book_append_sheet(wb, wsPT, 'Performance Table');
+  }
+
+  // ── Sheet 3: Campaign Setup ─────────────────────────────────
+  const ws2Data = [
+    ['CAMPAIGN SETUP'],
+    [],
+    ['Campaign Name',  c.name||''],
+    ['Client',         c.client||''],
+    ['Offer Name',     c.offer||''],
+    ['Start Date',     c.startDate||''],
+    ['Total Weeks',    c.weeks||''],
+    ['Retailers',      c.retailers||''],
+    ['Objective',      c.objective||''],
+    [],
+    ['OVERALL TARGETS'],
+    [],
+    ['Metric', 'Overall Target', 'Weekly Target (auto)']
+  ];
+
+  METRICS_DEF.forEach(m => {
+    const overall = c.targets?.[m.id]||0;
+    const weekly  = c.weeks && !m.isRatio ? Math.round(overall/c.weeks) : overall;
+    ws2Data.push([
+      m.name,
+      m.isRatio ? +(overall*100).toFixed(1) : overall,
+      m.isRatio ? +(weekly*100).toFixed(1)  : weekly
+    ]);
+  });
+
+  const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
+  ws2['!cols'] = [{wch:28},{wch:20},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Campaign Setup');
+
+  // ── Sheet 4: Week-on-Week History ───────────────────────────
+  const entries = Object.values(c.weeklyData||{}).sort((a,b)=>new Date(a.weekDate)-new Date(b.weekDate));
+  if(entries.length) {
+    const ws3Data = [['Week Commencing','Week #','Coupons Requested Actual','Coupons Requested % Wk Target','Coupons Activated Actual','Coupons Activated % Wk Target','Coupons Redeemed Actual','Coupons Redeemed % Wk Target','Act→Red % Actual','Act→Red % vs Target','Internal Notes']];
+    entries.forEach(en => {
+      const row = [
+        en.weekDate ? new Date(en.weekDate).toLocaleDateString('en-GB') : '',
+        en.weekNum||''
+      ];
+      METRICS_DEF.forEach(m => {
+        const md = en.metrics?.find(x=>x.id===m.id);
+        if(md) {
+          row.push(m.isRatio ? +(md.actual*100).toFixed(1) : md.actual);
+          const pct = md.weeklyTarget ? md.actual/md.weeklyTarget : '';
+          row.push(pct!==''?pct:'');
+        } else { row.push('',''); }
+      });
+      row.push(en.notes||'');
+      ws3Data.push(row);
+    });
+    const ws3 = XLSX.utils.aoa_to_sheet(ws3Data);
+    ws3['!cols'] = [{wch:16},{wch:8},{wch:20},{wch:22},{wch:20},{wch:22},{wch:20},{wch:22},{wch:16},{wch:18},{wch:40}];
+    // Format % columns
+    for(let r=1;r<ws3Data.length;r++) {
+      [3,5,7,9].forEach(ci => {
+        const cell = XLSX.utils.encode_cell({r,c:ci});
+        if(ws3[cell]&&typeof ws3[cell].v==='number') ws3[cell].z='0%';
+      });
+    }
+    XLSX.utils.book_append_sheet(wb, ws3, 'Week-on-Week History');
+  }
+
+  const fname = `${(c.name||'campaign').replace(/\s+/g,'-').toLowerCase()}-wk${e.weekNum||''}-${e.weekDate||''}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  toast('Excel downloaded ✓');
+}
+
+function openSheetsSettings() {
+  const stored = localStorage.getItem('savi_sheets_url') || '';
+  document.getElementById('sheets-url-input').value = stored;
+  document.getElementById('sheets-test-status').textContent = '';
+  document.getElementById('sheets-modal').classList.add('open');
+}
+
+function closeSheetsModal(e) {
+  if(!e || e.target === document.getElementById('sheets-modal')) {
+    document.getElementById('sheets-modal').classList.remove('open');
+  }
+}
+
+async function saveSheetsUrl() {
+  const url = document.getElementById('sheets-url-input').value.trim();
+  const statusEl = document.getElementById('sheets-test-status');
+
+  if(!url) { statusEl.textContent = 'Please enter a URL'; statusEl.style.color = 'var(--red)'; return; }
+  if(!url.includes('script.google.com')) {
+    statusEl.textContent = 'That doesn\'t look like a Google Apps Script URL — please check and try again';
+    statusEl.style.color = 'var(--red)'; return;
+  }
+
+  statusEl.textContent = '⟳ Testing connection…'; statusEl.style.color = 'var(--muted)';
+
+  try {
+    const res = await fetch(url);
+    const json = await res.json();
+    if(json.status === 'ok') {
+      localStorage.setItem('savi_sheets_url', url);
+      // Update the SHEETS_URL at runtime
+      window._sheetsUrl = url;
+      statusEl.textContent = '✓ Connected! Reloading data…'; statusEl.style.color = 'var(--green)';
+      setTimeout(() => {
+        closeSheetsModal();
+        toast('Google Sheets connected ✓ — reloading data');
+        location.reload();
+      }, 1200);
+    } else {
+      statusEl.textContent = '⚠ Script responded but returned an error — check your deployment settings'; statusEl.style.color = 'var(--amber)';
+    }
+  } catch(e) {
+    statusEl.textContent = '⚠ Could not connect — make sure "Who has access" is set to Anyone in your deployment'; statusEl.style.color = 'var(--red)';
+  }
+}
+
+function clearSheetsUrl() {
+  if(!confirm('Disconnect Google Sheets? The tool will use local storage only.')) return;
+  localStorage.removeItem('savi_sheets_url');
+  window._sheetsUrl = '';
+  closeSheetsModal();
+  toast('Disconnected — using local storage');
+  setSyncStatus('💾 Local only — add Sheets URL to sync', 'var(--amber)');
+}
+
+function downloadAppsScript() {
+  const code = `// ================================================================
+// SAVI CAMPAIGN REVIEW TOOL — Google Apps Script Backend
+// ================================================================
+// SETUP INSTRUCTIONS:
+// 1. Open your Google Sheet
+// 2. Click Extensions > Apps Script
+// 3. Delete any existing code and paste this entire file
+// 4. Click Save (floppy disk icon)
+// 5. Click Deploy > New Deployment
+// 6. Click the gear icon next to "Type" and select "Web App"
+// 7. Set "Execute as" = Me
+// 8. Set "Who has access" = Anyone
+// 9. Click Deploy
+// 10. Copy the Web App URL and paste it into the campaign tool
+// ================================================================
+
+const SHEET_NAME = 'CampaignData';
+const DATA_KEY   = 'savi_data';
+
+function getOrCreateSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.getRange('A1').setValue('key');
+    sheet.getRange('B1').setValue('value');
+    sheet.getRange('C1').setValue('updated');
+    sheet.getRange('A1:C1').setFontWeight('bold');
+  }
+  return sheet;
+}
+
+function getData() {
+  const sheet = getOrCreateSheet();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === DATA_KEY) return data[i][1];
+  }
+  return null;
+}
+
+function setData(value) {
+  const sheet = getOrCreateSheet();
+  const data  = sheet.getDataRange().getValues();
+  const now   = new Date().toISOString();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === DATA_KEY) {
+      sheet.getRange(i + 1, 2).setValue(value);
+      sheet.getRange(i + 1, 3).setValue(now);
+      return;
+    }
+  }
+  const nextRow = sheet.getLastRow() + 1;
+  sheet.getRange(nextRow, 1).setValue(DATA_KEY);
+  sheet.getRange(nextRow, 2).setValue(value);
+  sheet.getRange(nextRow, 3).setValue(now);
+}
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ status: 'ok', data: getData() }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    const payload = JSON.parse(e.postData.contents);
+    if (payload.data !== undefined) {
+      setData(payload.data);
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'error', message: 'No data' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+
+  const blob = new Blob([code], {type:'text/javascript'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'savi-apps-script.js';
+  a.click();
+}
+
+// Load saved Sheets URL from localStorage on startup
+(function() {
+  const stored = localStorage.getItem('savi_sheets_url');
+  if(stored) window._sheetsUrl = stored;
+})();
+
+// Show loading state while data loads
+document.getElementById('dashboard-content').innerHTML = `
+  <div style="text-align:center;padding:60px 20px;color:var(--muted);">
+    <div style="font-size:32px;margin-bottom:12px;">⏳</div>
+    <div style="font-size:16px;font-weight:600;color:var(--teal);">Loading shared campaign data…</div>
+    <div style="font-size:13px;margin-top:6px;">Connecting to team workspace</div>
+  </div>`;
+
+loadState(); // async — boots UI once complete
+
+// Intercept history nav to always re-render
+
+// Patch goScreen to trigger renders
+const _goScreen = goScreen;
+window.goScreen = function(id, skipSave) {
+  // Save weekly form state before navigating away
+  const currentScreen = document.querySelector('.screen.active')?.id;
+  if(currentScreen === 'screen-weekly' && id !== 'weekly' && !skipSave) {
+    saveWeeklyFormState();
+  }
+  _goScreen(id);
+  if(id==='history') renderHistory();
+  if(id==='dashboard') renderDashboard();
+  if(id==='weekly') { buildWeeklyInputs(); setTimeout(() => restoreWeeklyFormState(), 0); }
+};
+
+function saveWeeklyFormState() {
+  const cid = state.activeCampaignId;
+  if(!cid) return;
+  const draft = {
+    date: document.getElementById('w-date')?.value || '',
+    notes: document.getElementById('w-notes')?.value || '',
+    actuals: {}
+  };
+  const cForDraft = activeCampaign();
+  const draftMetrics = getActiveMetrics(cForDraft);
+  draftMetrics.forEach(m => {
+    if(m.auto) return;
+    draft.actuals[m.id] = document.getElementById('w-'+m.id+'-actual')?.value || '';
+  });
+  state.weeklyDraft = state.weeklyDraft || {};
+  state.weeklyDraft[cid] = draft;
+  // Save draft to localStorage immediately (no async needed — no Google Sheets for drafts)
+  try { localStorage.setItem('savi_draft_'+cid, JSON.stringify(draft)); } catch(e) {}
+}
+
+function restoreWeeklyFormState() {
+  const cid = state.activeCampaignId;
+  if(!cid) return;
+
+  // Try state first, fall back to localStorage draft
+  let draft = state.weeklyDraft?.[cid];
+  if(!draft) {
+    try {
+      const stored = localStorage.getItem('savi_draft_'+cid);
+      if(stored) draft = JSON.parse(stored);
+    } catch(e) {}
+  }
+  if(!draft) return;
+
+  // Set date and trigger week number / cumulative calc first (skip actuals — we handle below)
+  if(draft.date) {
+    const el = document.getElementById('w-date');
+    if(el) el.value = draft.date;
+    onWeekDateChange(true); // true = skip actuals loading
+  }
+
+  // Restore notes
+  const notesEl = document.getElementById('w-notes');
+  if(notesEl) notesEl.value = draft.notes || '';
+
+  const c = state.campaigns[cid];
+  const savedWeek = draft.date ? c?.weeklyData?.[draft.date] : null;
+
+  if(savedWeek) {
+    // Week has been saved — restore actuals from saved data (overwrite whatever onWeekDateChange set)
+    const cForRestore = state.campaigns[cid];
+    const restoreMetrics = getActiveMetrics(cForRestore);
+    restoreMetrics.forEach(m => {
+      if(m.auto) return;
+      const el = document.getElementById('w-'+m.id+'-actual');
+      const savedM = savedWeek.metrics?.find(x=>x.id===m.id);
+      if(el) el.value = savedM?.actual !== undefined ? savedM.actual : '';
+    });
+    if(notesEl && savedWeek.notes) notesEl.value = savedWeek.notes;
+    renderWeeklyRagSummary();
+  } else {
+    // Not yet saved — restore from draft actuals
+    const cForDraftRestore = state.campaigns[cid];
+    const draftRestoreMetrics = getActiveMetrics(cForDraftRestore);
+    draftRestoreMetrics.forEach(m => {
+      if(m.auto) return;
+      const el = document.getElementById('w-'+m.id+'-actual');
+      if(el) el.value = draft.actuals?.[m.id] || '';
+    });
+  }
+
+  // Recalc ATR from whatever actuals are now showing
+  recalcAtr();
+}
+
+function loadSavedWeekIntoForm(weekDate) {
+  // Load a previously saved week back into the form for editing
+  const c = activeCampaign();
+  if(!c) return;
+  const saved = c.weeklyData?.[weekDate];
+  if(!saved) return;
+  const dateEl = document.getElementById('w-date');
+  if(dateEl) { dateEl.value = weekDate; onWeekDateChange(); }
+  const notesEl = document.getElementById('w-notes');
+  if(notesEl) notesEl.value = saved.notes || '';
+  METRICS_DEF.forEach(m => {
+    if(m.id === 'atr') return;
+    const el = document.getElementById('w-'+m.id+'-actual');
+    const savedM = saved.metrics?.find(x=>x.id===m.id);
+    if(el && savedM) el.value = savedM.actual || '';
+  });
+  recalcAtr();
+  toast('Week loaded — edit and save again to update');
+}
+</script>
+</body>
+</html>
