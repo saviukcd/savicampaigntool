@@ -388,8 +388,32 @@
   .rp-presenting .rp-exit-fs{display:block;position:fixed;top:10px;right:14px;z-index:60;background:rgba(11,74,71,.92);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;}
 
   /* ===== PDF capture: every page is drawn at one fixed width, so the PDF looks the same on any screen ===== */
-  .rp-root.rp-export .rp-shell{width:1100px !important;max-width:1100px !important;margin-left:0;margin-right:0;}
-  .rp-root.rp-export .rp-wk{min-width:88px;}
+  .rp-root.rp-export .rp-shell{width:960px !important;max-width:960px !important;margin-left:0;margin-right:0;}
+  .rp-root.rp-export .rp-wkpage{width:1000px !important;max-width:1000px !important;}
+  .rp-root.rp-export .rp-wk{min-width:84px;}
+  /* larger type for the PDF, so it reads comfortably when the page is shown on screen */
+  .rp-root.rp-export .rp-lab, .rp-root.rp-export .rp-caption{font-size:11.5px;}
+  .rp-root.rp-export .rp-facts, .rp-root.rp-export .rp-client{font-size:14.5px;}
+  .rp-root.rp-export .rp-objective{font-size:13.5px;}
+  .rp-root.rp-export .rp-kpi-name, .rp-root.rp-export .rp-fc-name{font-size:14px;}
+  .rp-root.rp-export .rp-kpi-sub{font-size:13px;}
+  .rp-root.rp-export .rp-kpi-val{font-size:35px;}
+  .rp-root.rp-export .rp-pill{font-size:12.5px;}
+  .rp-root.rp-export .rp-panel-sub, .rp-root.rp-export .rp-fc-text{font-size:12.5px;}
+  .rp-root.rp-export .rp-fn-row{grid-template-columns:20px 164px 1fr 84px;}
+  .rp-root.rp-export .rp-fn-name{font-size:13.5px;}
+  .rp-root.rp-export .rp-fn-val{font-size:14px;}
+  .rp-root.rp-export .rp-fn-step{font-size:11.5px;margin-left:194px;}
+  .rp-root.rp-export .rp-legend, .rp-root.rp-export .rp-fn-legend, .rp-root.rp-export .rp-fn-total{font-size:12.5px;}
+  .rp-root.rp-export .rp-ins-text{font-size:14px;}
+  .rp-root.rp-export .rp-table{font-size:14px;}
+  .rp-root.rp-export .rp-table thead th{font-size:12.5px;}
+  .rp-root.rp-export .rp-wk-date{font-size:11px;}
+  .rp-root.rp-export .rp-strip-val{font-size:14.5px;}
+  .rp-root.rp-export .key-table, .rp-root.rp-export .key-table td{font-size:13.5px;}
+  .rp-root.rp-export .key-read dt, .rp-root.rp-export .key-read dd, .rp-root.rp-export .key-p{font-size:13.5px;}
+  .rp-root.rp-export .rp-pdfnav-item{font-size:13.5px;}
+  .rp-root.rp-export .rp-pdfnav-tip{font-size:12px;}
 
   /* ===== PDF-only jump strip and ? buttons (hidden on screen) ===== */
   .rp-pdfnav{display:none;}
@@ -649,6 +673,7 @@
   .rp-fn-fill.cat-activation, .rp-fn-sw.cat-activation{box-shadow:inset 0 0 0 1px #224B50;}
   .rp-help:hover, .rp-help:focus{background:#4DFFA8;color:#224B50;outline:none;}
   .sidebar-version{font-size:10.5px;opacity:.55;margin:10px 4px 0;}
+  .rp-pdfstyle{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-600);}
 </style>
 </head>
 <body>
@@ -2216,7 +2241,7 @@ function forecastFor(c, m, recorded, totalWeeks){
 }
 // Headline cards: the first four of these that are on the report (the Blue Light Card set is App Codes
 // Issued, Rewards Redeemed and the two conversion rates). Easy to make configurable later.
-const APP_VERSION = 'build 2026-11-11.5';
+const APP_VERSION = 'build 2026-11-11.7';
 const KPI_PREFS = {
   bluelight:    ['app_codes','red','itr','atr','issued','act','app_views','redval','visits'],
   intermediate: ['issued','red','itr','atr','act','redval','visits'],
@@ -2436,7 +2461,7 @@ function renderReport(){
   </div>`;
 
   // ---- PDF-only pages: every week, split across as many pages as needed so nothing is cut off
-  const pages = recorded ? Math.ceil(recorded/6) : 0;
+  const pages = recorded ? Math.ceil(recorded/5) : 0;
   const baseSize = pages ? Math.floor(recorded/pages) : 0, extraWeeks = pages ? recorded % pages : 0;
   let cut = 0;
   const chunks = Array.from({length:pages}, (_,i)=>{ const size = baseSize + (i<extraWeeks ? 1 : 0); const part = weekDates.slice(cut, cut+size); cut += size; return part; });
@@ -2451,6 +2476,7 @@ function renderReport(){
       <button class="btn ghost" data-nav="weekly">← Back to Weekly Entry</button></div>
     <div class="toolbar">
       <label class="check-pill" style="margin-right:auto;"><input type="checkbox" data-action="toggle-report-key" ${c.reportShowKey!==false?'checked':''}> Include key page in the PDF</label>
+      <label class="rp-pdfstyle">PDF pages <select id="pdf-style" class="rp-select"><option value="fit" ${c.pdfPageStyle!=='a4'?'selected':''}>Fit to content</option><option value="a4" ${c.pdfPageStyle==='a4'?'selected':''}>A4 landscape</option></select></label>
       <button class="btn secondary" data-action="report-fullscreen">⛶ Full screen</button>
       <button class="btn secondary" data-action="export-pdf">⬇ Download PDF</button>
       <button class="btn secondary" data-action="export-excel">⬇ Download Excel</button>
@@ -2686,11 +2712,11 @@ async function exportPDF(){
   const elements = [overviewEl, ...document.querySelectorAll('#rp-export-pages .rp-wkpage')];
   const keyEl = document.getElementById('report-key-page');
   if(keyEl) elements.push(keyEl);
-  // The tab you are looking at hides the other one, so the capture copy shows everything.
   // Where each tab / "?" button sits inside the page it is drawn on (measured in the capture copy, which is
-  // exactly what gets photographed), so a clickable area can be laid over it in the PDF.
+  // exactly what gets photographed), so a clickable area can be laid over it in the PDF. The capture copy also
+  // shows every page (the tab you are looking at hides the others) at one fixed width.
   const linkMap = {}, baseW = {};
-  const snap = (el)=> window.html2canvas(el, {scale:2, backgroundColor:'#ffffff', useCORS:true, windowWidth:1700,
+  const snap = (el)=> window.html2canvas(el, {scale:2.5, backgroundColor:'#ffffff', useCORS:true, windowWidth:1700,
     onclone:(cloned)=>{
       const r = cloned.getElementById('report-root'); if(r) r.classList.add('rp-export');
       if(cloned.body) cloned.body.classList.add('rp-exporting');
@@ -2706,22 +2732,29 @@ async function exportPDF(){
   const pageFor = { overview:1, weekly: nWeekly ? 2 : null, key: keyEl ? 2 + nWeekly : null };
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'a4'});
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-  const margin = 18;
-  const usableW = pageW - margin*2;
-  const usableH = pageH - margin*2;
-  let first = true;
+  const A4W = 841.89, A4H = 595.28;
+  const fitToContent = c.pdfPageStyle !== 'a4';   // default: every page is exactly as tall as its content
+  let doc = null;
   try{
     for(const el of elements){
       const canvas = await snap(el);
-      if(!first) doc.addPage();
-      first = false;
-      // One page each, never sliced: fit to the page width, or shrink to fit the height.
-      let w = usableW, h = (canvas.height * w) / canvas.width;
-      if(h > usableH){ h = usableH; w = (canvas.width * h) / canvas.height; }
-      const x0 = margin + (usableW - w)/2, y0 = margin + (usableH - h)/2;   // centred, so no band of empty page at one end
+      let ph, x0, y0, w, h;
+      const pw = A4W;
+      if(fitToContent){
+        // A4-landscape width, height to suit the content: no empty band at the bottom of any page.
+        const m = 14;
+        w = pw - m*2; h = (canvas.height * w) / canvas.width;
+        ph = h + m*2; x0 = m; y0 = m;
+      } else {
+        // Standard A4 landscape pages (for printing): scaled to fit and centred.
+        const m = 18, usableW = pw - m*2, usableH = A4H - m*2;
+        ph = A4H; w = usableW; h = (canvas.height * w) / canvas.width;
+        if(h > usableH){ h = usableH; w = (canvas.width * h) / canvas.height; }
+        x0 = m + (usableW - w)/2; y0 = m + (usableH - h)/2;
+      }
+      const orient = pw >= ph ? 'l' : 'p';
+      if(!doc) doc = new jsPDF({orientation:orient, unit:'pt', format:[pw, ph]});
+      else doc.addPage([pw, ph], orient);
       doc.addImage(canvas.toDataURL('image/png'), 'PNG', x0, y0, w, h);
       // Clickable areas over the tabs and ? buttons (a little larger than the button itself, so they are easy to hit).
       const f = baseW[el.id] ? w / baseW[el.id] : 0, pad = 4;
@@ -3407,6 +3440,13 @@ function attachHandlers(){
   const fromSel = app.querySelector('#rp-from'), toSel = app.querySelector('#rp-to');
   if(fromSel) fromSel.addEventListener('change', ()=>{ weeklyFrom = Number(fromSel.value); render(); });
   if(toSel) toSel.addEventListener('change', ()=>{ weeklyTo = Number(toSel.value); render(); });
+  const pdfStyleSel = app.querySelector('#pdf-style');
+  if(pdfStyleSel) pdfStyleSel.addEventListener('change', async ()=>{
+    const c = campaigns.find(x=>x.id===currentCampaignId);
+    if(!c) return;
+    c.pdfPageStyle = pdfStyleSel.value;
+    await persistCampaigns();
+  });
   const keyToggle = app.querySelector('[data-action="toggle-report-key"]');
   if(keyToggle) keyToggle.addEventListener('change', async ()=>{
     const c = campaigns.find(x=>x.id===currentCampaignId);
