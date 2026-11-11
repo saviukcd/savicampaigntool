@@ -307,7 +307,16 @@
   .rp-fn-ico{color:#0B8F72;display:inline-flex;}
   .rp-fn-name{font-size:12.5px;font-weight:600;}
   .rp-fn-track{height:16px;background:#E5EFED;border-radius:8px;overflow:hidden;}
-  .rp-fn-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,#0B4A47,#3FD79B);}
+  .rp-fn-fill{height:100%;border-radius:8px;background:#5CC8B8;}
+  .rp-fn-fill.cat-engagement, .rp-fn-sw.cat-engagement{background:#5CC8B8;}
+  .rp-fn-fill.cat-activation, .rp-fn-sw.cat-activation{background:#2FA98C;}
+  .rp-fn-fill.cat-redemption, .rp-fn-sw.cat-redemption{background:#0B4A47;}
+  .rp-fn-fill.cat-other, .rp-fn-sw.cat-other{background:#9DB3AF;}
+  .rp-fn-legend{display:flex;gap:16px;font-size:11px;color:#5B7A76;margin-top:10px;}
+  .rp-fn-sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px;}
+  .rp-empty-big{padding:34px 20px;text-align:center;font-size:14px;color:#5B7A76;border:1px dashed var(--rp-line);border-radius:12px;margin-top:18px;background:var(--rp-aqua2);}
+  .rp-help:hover, .rp-help:focus{background:#0B4A47;outline:none;}
+  .rp-tip{display:none;position:fixed;z-index:200;max-width:300px;background:#0B4A47;color:#fff;font-size:12.5px;line-height:1.45;padding:10px 13px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.28);pointer-events:none;}
   .rp-fn-val{font-size:13px;font-weight:800;text-align:right;color:var(--rp-deep);}
   .rp-fn-step{margin-left:168px;font-size:10.5px;font-weight:700;color:#5B7A76;padding:0 0 1px;}
   .rp-fn-total{margin-top:10px;padding-top:9px;border-top:1px solid var(--rp-line);font-size:12.5px;display:flex;align-items:center;gap:7px;color:#3F5F5B;}
@@ -381,8 +390,12 @@
   .rp-presenting .wrap.rp-wide{padding-top:16px;}
   .rp-presenting .rp-exit-fs{display:block;position:fixed;top:10px;right:14px;z-index:60;background:rgba(11,74,71,.92);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;}
 
+  /* ===== PDF capture: every page is drawn at one fixed width, so the PDF looks the same on any screen ===== */
+  .rp-root.rp-export .rp-shell{width:1100px !important;max-width:1100px !important;margin-left:0;margin-right:0;}
+  .rp-root.rp-export .rp-wk{min-width:88px;}
+
   /* ===== PDF-only jump strip and ? buttons (hidden on screen) ===== */
-  .rp-pdfnav, .rp-help{display:none;}
+  .rp-pdfnav{display:none;}
   .rp-pdfnav{align-items:center;gap:8px;margin:0 0 14px;flex-wrap:wrap;}
   .rp-pdfnav-key{margin:16px 30px 0;}
   .rp-pdfnav-lab{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#5B7A76;font-weight:700;margin-right:2px;}
@@ -390,9 +403,10 @@
   .rp-pdfnav-item.active{background:var(--rp-deep);color:#fff;}
   .rp-pdfnav-tip{font-size:11px;color:#5B7A76;margin-left:8px;}
   .rp-pdfnav-tip b{display:inline-block;width:13px;height:13px;line-height:13px;text-align:center;border-radius:50%;background:#0B8F72;color:#fff;font-size:9px;}
-  .rp-help{width:15px;height:15px;border-radius:50%;background:#0B8F72;color:#fff;font-size:10px;font-weight:800;align-items:center;justify-content:center;margin-left:6px;flex-shrink:0;vertical-align:middle;}
+  .rp-help{width:15px;height:15px;border-radius:50%;background:#0B8F72;color:#fff;font-size:10px;font-weight:800;align-items:center;justify-content:center;margin-left:6px;flex-shrink:0;vertical-align:middle;display:inline-flex;cursor:help;}
   .rp-exporting .rp-pdfnav{display:flex;}
   .rp-exporting .rp-help{display:inline-flex;}
+  .rp-exporting .rp-help:not([data-pdf-link]){display:none;}
 
   /* ===== Reminders ===== */
   .sidebar-count{background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:auto;}
@@ -756,9 +770,30 @@ let reportTab = 'overview';   // the report always opens on Overview
 let weeklyPeriod = 'all';     // Weekly Performance: 'all' | 'latest4' | 'prev4' | 'custom'
 let weeklyFrom = 1, weeklyTo = 0; // custom period, by position in the recorded weeks (0 = last week)
 let lastRenderedView = null;
+(function(){
+  let tip = null, pinned = null;
+  const bubble = ()=>{ if(!tip){ tip = document.createElement('div'); tip.className = 'rp-tip'; tip.setAttribute('role','tooltip'); document.body.appendChild(tip); } return tip; };
+  const show = (el)=>{
+    const t = bubble(); t.textContent = el.getAttribute('data-help') || ''; t.style.display = 'block';
+    const r = el.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
+    const left = Math.min(Math.max(8, r.left + r.width/2 - w/2), Math.max(8, window.innerWidth - w - 8));
+    let top = r.bottom + 8; if(top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 8);
+    t.style.left = left + 'px'; t.style.top = top + 'px';
+  };
+  const hide = ()=>{ if(tip) tip.style.display = 'none'; pinned = null; };
+  const help = (e)=> e.target && e.target.closest ? e.target.closest('.rp-help') : null;
+  document.addEventListener('mouseover', (e)=>{ const h = help(e); if(h && !pinned) show(h); });
+  document.addEventListener('mouseout',  (e)=>{ if(help(e) && !pinned) hide(); });
+  document.addEventListener('focusin',   (e)=>{ const h = help(e); if(h && !pinned) show(h); });
+  document.addEventListener('focusout',  (e)=>{ if(help(e) && !pinned) hide(); });
+  document.addEventListener('click', (e)=>{ const h = help(e); if(h){ if(pinned===h) hide(); else { pinned = h; show(h); } return; } hide(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') hide(); });
+  window.addEventListener('scroll', hide, true);
+})();
 ['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev, ()=>{
   document.body.classList.toggle('rp-presenting', !!(document.fullscreenElement || document.webkitFullscreenElement));
 }));
+let rpHasWeekly = true;   // false until a week with figures exists (the PDF jump strip then leaves Weekly Performance out)
 let rpKeyOn = true;          // is the key page part of this report? (the PDF's ? buttons only exist when it is)
 
 // ---------- Storage helpers ----------
@@ -2143,6 +2178,9 @@ const METRIC_ICONS = { app_views:'eye', app_codes:'ticket', visits:'users', issu
 function metricIcon(m){ return rpIcon(m.custom ? 'chart' : (METRIC_ICONS[m.id]||'chart'), 16); }
 function fmtShortDay(d){ return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
 
+// A saved week only counts as "entered" once it holds at least one figure above zero. A week saved with nothing
+// in it is left out of the report's weekly tables, period selector and PDF pages.
+function weekHasData(entry){ return !!entry && (entry.metrics||[]).some(m=>Number(m.actual) > 0); }
 function cumFor(c, id){ return calcCumulativeFromHistory(c, id, '9999-99-99', 0); }
 // Campaign-to-date conversion uses the same ratio() rule as the weekly figures, applied to the campaign
 // totals — never an average of the weekly percentages.
@@ -2188,10 +2226,18 @@ function rpTabs(active){
 }
 // PDF-only extras. On screen they are hidden; in the PDF they are drawn as buttons and each one gets
 // a clickable area over it (see exportPDF), so the downloaded PDF can jump between pages.
-function rpHelp(){ return rpKeyOn ? '<span class="rp-help" data-pdf-link="key">?</span>' : ''; }
+// A "?" that explains itself: hover (or click / tap) on screen shows the text; in the PDF it jumps to the key page
+// (only when that page is included, which is what data-pdf-link marks).
+function rpHelp(text){
+  if(!text) return '';
+  return `<span class="rp-help" tabindex="0" role="button" aria-label="What does this mean?" data-help="${escapeHtml(text)}"${rpKeyOn ? ' data-pdf-link="key"' : ''}>?</span>`;
+}
+const FORECAST_NOTE = 'Based on the estimates set for this campaign, this shows where each measure would finish if it keeps performing at its current average weekly pace. It is an indication, not a guarantee, and updates as each new week is added.';
+const FORECAST_HELP = FORECAST_NOTE + ' Green: On Track (over 75% of the estimate, up to 115%). Amber: Needs Attention (over 50% and up to 75%, or above 115%). Red: Behind Estimate (50% or less).';
+const FUNNEL_HELP = 'Totals to date at each step of the journey. The arrow under a step shows the share that moved on from the step above.';
 function rpPdfNav(active, extraClass){
   const item = (id, label)=>`<span class="rp-pdfnav-item ${active===id?'active':''}" data-pdf-link="${id}">${label}</span>`;
-  return `<div class="rp-pdfnav ${extraClass||''}"><span class="rp-pdfnav-lab">Jump to</span>${item('overview','Overview')}${item('weekly','Weekly Performance')}${rpKeyOn ? item('key','Key') : ''}${rpKeyOn ? '<span class="rp-pdfnav-tip">Click a <b>?</b> to see what a measure means</span>' : ''}</div>`;
+  return `<div class="rp-pdfnav ${extraClass||''}"><span class="rp-pdfnav-lab">Jump to</span>${item('overview','Overview')}${rpHasWeekly ? item('weekly','Weekly Performance') : ''}${rpKeyOn ? item('key','Key') : ''}${rpKeyOn ? '<span class="rp-pdfnav-tip">Click a <b>?</b> to see what a measure means</span>' : ''}</div>`;
 }
 function rpInfoCard(c, totalWeeks, limitLabel){
   const fact = (icon, text)=>`<span class="rp-fact">${rpIcon(icon,18)}<span>${text}</span></span>`;
@@ -2222,7 +2268,7 @@ function rpInfoStrip(c, totalWeeks, limitLabel){
 function rpKpiCard(c, m, ctx){
   if(m.isRatio){
     const v = cumulativeConversion(c, m.id);
-    return `<div class="rp-kpi"><div class="rp-kpi-top"><span class="rp-kpi-ico">${metricIcon(m)}</span><span class="rp-kpi-name">${escapeHtml(m.name)}${rpHelp()}</span></div>
+    return `<div class="rp-kpi"><div class="rp-kpi-top"><span class="rp-kpi-ico">${metricIcon(m)}</span><span class="rp-kpi-name">${escapeHtml(m.name)}${rpHelp(metricDescription(m))}</span></div>
       <div class="rp-kpi-val">${v===null ? '—' : v+'%'}</div><div class="rp-kpi-sub">Current conversion</div></div>`;
   }
   const cum = cumFor(c, m.id);
@@ -2235,10 +2281,14 @@ function rpKpiCard(c, m, ctx){
     sub = `${fmtMetricValue(m, target)} estimate`;
     bar = `<div class="rp-bar"><div class="rp-bar-fill ${st}" style="width:${Math.min(100, Math.max(0, pct))}%;"></div></div>`;
   }
-  return `<div class="rp-kpi"><div class="rp-kpi-top"><span class="rp-kpi-ico">${metricIcon(m)}</span><span class="rp-kpi-name">${escapeHtml(m.name)}${rpHelp()}</span>${pill}</div>
+  return `<div class="rp-kpi"><div class="rp-kpi-top"><span class="rp-kpi-ico">${metricIcon(m)}</span><span class="rp-kpi-name">${escapeHtml(m.name)}${rpHelp(metricDescription(m))}</span>${pill}</div>
     <div class="rp-kpi-val">${fmtMetricValue(m, cum)}</div><div class="rp-kpi-sub">${sub}</div>${bar}</div>`;
 }
 
+function rpFunnelLegend(stages){
+  const cats = [...new Set(stages.map(s=>metricGroup(s.m)))];
+  return `<div class="rp-fn-legend">${cats.map(g=>`<span><i class="rp-fn-sw cat-${g}"></i>${GROUP_DEFS[g].label}</span>`).join('')}</div>`;
+}
 // Whole-journey view: every step of the funnel that is on the report, with the share that moved on.
 function rpFunnel(c, visibleMetrics){
   const stages = visibleMetrics.filter(m=>FUNNEL_IDS.includes(m.id)).map(m=>({m, v:cumFor(c, m.id)}));
@@ -2248,12 +2298,12 @@ function rpFunnel(c, visibleMetrics){
     const w = s.v>0 ? Math.max(2, Math.round(s.v/max*100)) : 0;
     const prev = i>0 ? stages[i-1].v : 0;
     const step = (i>0 && prev>0 && s.v<=prev) ? `<div class="rp-fn-step">↓ ${ratio(s.v, prev)}%</div>` : '';
-    return `${step}<div class="rp-fn-row"><span class="rp-fn-ico">${metricIcon(s.m)}</span><span class="rp-fn-name">${escapeHtml(s.m.name)}${rpHelp()}</span><div class="rp-fn-track"><div class="rp-fn-fill" style="width:${w}%;"></div></div><span class="rp-fn-val">${fmtMetricValue(s.m, s.v)}</span></div>`;
+    return `${step}<div class="rp-fn-row"><span class="rp-fn-ico">${metricIcon(s.m)}</span><span class="rp-fn-name">${escapeHtml(s.m.name)}${rpHelp(metricDescription(s.m))}</span><div class="rp-fn-track"><div class="rp-fn-fill cat-${metricGroup(s.m)}" style="width:${w}%;"></div></div><span class="rp-fn-val">${fmtMetricValue(s.m, s.v)}</span></div>`;
   }).join('');
   const redval = visibleMetrics.find(m=>m.id==='redval');
   const valueLine = redval ? `<div class="rp-fn-total">${rpIcon('pound',16)} Value redeemed to date: <strong>${fmtMetricValue(redval, cumFor(c,'redval'))}</strong></div>` : '';
-  return `<div class="rp-panel"><div class="rp-panel-title">${rpIcon('filter',20)} Campaign Funnel</div>
-    <div class="rp-panel-sub">Totals to date at each step. Arrows show the share that moved on from the step above.</div>${rows}${valueLine}</div>`;
+  return `<div class="rp-panel"><div class="rp-panel-title">${rpIcon('filter',20)} Campaign Funnel${rpHelp(FUNNEL_HELP)}</div>
+    <div class="rp-panel-sub">Totals to date at each step. Arrows show the share that moved on from the step above.</div>${rows}${rpFunnelLegend(stages)}${valueLine}</div>`;
 }
 
 function rpForecast(c, visibleMetrics, ctx){
@@ -2266,15 +2316,15 @@ function rpForecast(c, visibleMetrics, ctx){
       const target = c.targets[m.id];
       const f = forecastFor(c, m, ctx.recorded, ctx.totalWeeks);
       if(f===null){
-        return `<div class="rp-fc-row"><div class="rp-fc-name">${escapeHtml(m.name)}${rpHelp()}</div><div class="rp-fc-mid"><div class="rp-fc-text">Forecast — / Estimate ${fmtMetricValue(m, target)}</div><div class="rp-bar"><div class="rp-bar-fill neutral" style="width:0%;"></div></div></div><span class="rp-pill neutral">—</span></div>`;
+        return `<div class="rp-fc-row"><div class="rp-fc-name">${escapeHtml(m.name)}${rpHelp(metricDescription(m))}</div><div class="rp-fc-mid"><div class="rp-fc-text">Forecast — / Estimate ${fmtMetricValue(m, target)}</div><div class="rp-bar"><div class="rp-bar-fill neutral" style="width:0%;"></div></div></div><span class="rp-pill neutral">—</span></div>`;
       }
       const pct = Math.round(f/target*1000)/10;
       const st = forecastRagForMetric(c, m.id) || 'neutral';
-      return `<div class="rp-fc-row"><div class="rp-fc-name">${escapeHtml(m.name)}${rpHelp()}</div><div class="rp-fc-mid"><div class="rp-fc-text">Forecast <strong>${fmtMetricValue(m, Math.round(f))}</strong> / Estimate ${fmtMetricValue(m, target)}</div><div class="rp-bar"><div class="rp-bar-fill ${st}" style="width:${Math.min(100, Math.max(0, pct))}%;"></div></div></div><span class="rp-pill ${st}">${pct}% of estimate</span></div>`;
+      return `<div class="rp-fc-row"><div class="rp-fc-name">${escapeHtml(m.name)}${rpHelp(metricDescription(m))}</div><div class="rp-fc-mid"><div class="rp-fc-text">Forecast <strong>${fmtMetricValue(m, Math.round(f))}</strong> / Estimate ${fmtMetricValue(m, target)}</div><div class="rp-bar"><div class="rp-bar-fill ${st}" style="width:${Math.min(100, Math.max(0, pct))}%;"></div></div></div><span class="rp-pill ${st}">${pct}% of estimate</span></div>`;
     }).join('') + `<div class="rp-legend"><span><i class="key-swatch green"></i>On Track</span><span><i class="key-swatch amber"></i>Needs Attention</span><span><i class="key-swatch red"></i>Behind Estimate</span></div>`;
   }
-  return `<div class="rp-panel"><div class="rp-panel-title">${rpIcon('target',20)} Forecast to End vs Estimate${rpHelp()}</div>
-    <div class="rp-panel-sub">Where the campaign is likely to finish if it carries on at its average weekly pace so far.</div>${body}</div>`;
+  return `<div class="rp-panel"><div class="rp-panel-title">${rpIcon('target',20)} Forecast to End vs Estimate${rpHelp(FORECAST_HELP)}</div>
+    <div class="rp-panel-sub">${FORECAST_NOTE}</div>${body}</div>`;
 }
 function rpInsights(notes){
   return `<div class="rp-insights"><div class="rp-ins-ico">${rpIcon('bulb',22)}</div><div><div class="rp-ins-title">Campaign Insights &amp; Next Steps</div><div class="rp-ins-text">${notes ? escapeHtml(notes) : 'No notes added for the latest week.'}</div></div></div>`;
@@ -2323,7 +2373,7 @@ function rpWeeklyTable(c, visibleMetrics, weeks, sticky){
     if(m.isRatio){ const v = cumulativeConversion(c, m.id); total = v===null ? '—' : v+'%'; }
     else { const est = c.targets && c.targets[m.id]; total = fmtMetricValue(m, cumFor(c, m.id)) + (est ? ` <span class="rp-of">of ${fmtMetricValue(m, est)}</span>` : ''); }
     const side = gm.first ? `<td class="grp-side grp-side-${gm.group}" rowspan="${gm.count}"><span class="rp-grp-label">${rpIcon(GROUP_DEFS[gm.group].icon, 20)}<span>${GROUP_DEFS[gm.group].label}</span></span></td>` : '';
-    return `<tr class="grp-${gm.group}${gm.first?' grp-start':''}">${side}<td class="metric-name rp-metric-cell"><span class="rp-mname">${escapeHtml(m.name)}${rpHelp()}</span></td>${cells}<td class="total-col rp-total-cell">${total}</td></tr>`;
+    return `<tr class="grp-${gm.group}${gm.first?' grp-start':''}">${side}<td class="metric-name rp-metric-cell"><span class="rp-mname">${escapeHtml(m.name)}${rpHelp(metricDescription(m))}</span></td>${cells}<td class="total-col rp-total-cell">${total}</td></tr>`;
   }).join('');
   return `<table class="rp-table ${sticky?'rp-stick':''}"><thead><tr><th class="rp-side-th"></th><th class="rp-metric-th">Metric</th>${head}<th class="rp-total-th">Total</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
@@ -2332,12 +2382,13 @@ function renderReport(){
   const c = campaigns.find(x=>x.id===currentCampaignId);
   if(!c){ currentView='dashboard'; return renderDashboard(); }
   const pkg = PACKAGES[c.package];
-  const weekDates = Object.keys(c.weeklyData).sort();
+  const weekDates = Object.keys(c.weeklyData).sort().filter(wd=>weekHasData(c.weeklyData[wd]));
   const visibleMetrics = effectiveMetrics(c).filter(m=>c.optionalMetrics[m.id]!==false);
   const totalWeeks = calcTotalWeeks(c.startDate, c.endDate);
   const recorded = weekDates.length;
   const ctx = {recorded, totalWeeks};
   rpKeyOn = c.reportShowKey!==false;
+  rpHasWeekly = recorded > 0;
 
   const ragIds = getRagMetricIds(c.package);
   const primaryTargetId = ragIds.slice().reverse().find(id => c.targets && c.targets[id]);
@@ -2366,16 +2417,18 @@ function renderReport(){
     <div class="rp-body">
       ${rpTabs('weekly')}
       ${rpInfoStrip(c, totalWeeks, limitLabel)}
-      <div class="rp-wk-head"><div class="rp-wk-title">${rpIcon('table',20)} Weekly Performance</div>${rpPeriodControls(c, weekDates)}</div>
+      ${recorded ? `<div class="rp-wk-head"><div class="rp-wk-title">${rpIcon('table',20)} Weekly Performance</div>${rpPeriodControls(c, weekDates)}</div>
       <div class="rp-scroll">${rpWeeklyTable(c, visibleMetrics, shown, true)}</div>
-      <div class="rp-note">${recorded ? 'Totals always cover the whole campaign, whichever weeks are shown. Percentage totals are worked out from the campaign totals.' : 'No weeks have been recorded yet.'}</div>
+      <div class="rp-note">Totals always cover the whole campaign, whichever weeks are shown. Percentage totals are worked out from the campaign totals.</div>`
+      : `<div class="rp-empty-big">No weekly figures have been entered yet. Each week appears here once its figures are saved.</div>`}
     </div>
   </div>`;
 
   // ---- PDF-only pages: every week, split across as many pages as needed so nothing is cut off
-  const pages = Math.max(1, Math.ceil(recorded/8));
-  const per = Math.max(1, Math.ceil(recorded/pages));
-  const chunks = Array.from({length:pages}, (_,i)=>weekDates.slice(i*per, (i+1)*per));
+  const pages = recorded ? Math.ceil(recorded/6) : 0;
+  const baseSize = pages ? Math.floor(recorded/pages) : 0, extraWeeks = pages ? recorded % pages : 0;
+  let cut = 0;
+  const chunks = Array.from({length:pages}, (_,i)=>{ const size = baseSize + (i<extraWeeks ? 1 : 0); const part = weekDates.slice(cut, cut+size); cut += size; return part; });
   const exportPages = chunks.map((wks, i)=>{
     const sub = pages>1 && wks.length ? `Weekly breakdown · weeks ${calcWeekNum(c.startDate, wks[0])}–${calcWeekNum(c.startDate, wks[wks.length-1])} (page ${i+1} of ${pages})` : `Weekly breakdown · ${recorded} week${recorded===1?'':'s'} recorded`;
     return `<div class="rp-shell rp-wkpage" id="rp-wkpage-${i}">${rpHeader(c.name, sub)}<div class="rp-body">${rpPdfNav('weekly')}${rpInfoStrip(c, totalWeeks, limitLabel)}<div class="rp-wk-head"><div class="rp-wk-title">${rpIcon('table',20)} Weekly Performance</div></div><div class="rp-scroll">${rpWeeklyTable(c, visibleMetrics, wks, false)}</div></div></div>`;
@@ -2386,7 +2439,7 @@ function renderReport(){
     <div class="top-meta"><div><h1>Report / Export</h1><div class="subtle">${escapeHtml(c.name)}</div></div>
       <button class="btn ghost" data-nav="weekly">← Back to Weekly Entry</button></div>
     <div class="toolbar">
-      <label class="check-pill" style="margin-right:auto;"><input type="checkbox" data-action="toggle-report-key" ${c.reportShowKey!==false?'checked':''}> Include key page</label>
+      <label class="check-pill" style="margin-right:auto;"><input type="checkbox" data-action="toggle-report-key" ${c.reportShowKey!==false?'checked':''}> Include key page in the PDF</label>
       <button class="btn secondary" data-action="report-fullscreen">⛶ Full screen</button>
       <button class="btn secondary" data-action="export-pdf">⬇ Download PDF</button>
       <button class="btn secondary" data-action="export-excel">⬇ Download Excel</button>
@@ -2394,9 +2447,8 @@ function renderReport(){
     <div class="rp-root" id="report-root" data-tab="${reportTab}">
       ${overview}
       ${weekly}
-      <div class="rp-export-pages" id="rp-export-pages">${exportPages}</div>
+      <div class="rp-export-pages" id="rp-export-pages">${exportPages}${c.reportShowKey!==false ? renderReportKey(c, visibleMetrics, recorded) : ''}</div>
     </div>
-    ${c.reportShowKey!==false ? `<div class="key-page-label">Key page · last page of the PDF</div>${renderReportKey(c, visibleMetrics, recorded)}` : ''}
   </div>`;
 }
 
@@ -2449,7 +2501,7 @@ function renderReportKey(c, visibleMetrics, recorded){
     ${rpPdfNav('key','rp-pdfnav-key')}
     <div class="key-body ${defRows?'':'single'}">
       ${defRows ? `<div><div class="key-title">What each measure means</div><table class="key-table"><tbody>${defRows}</tbody></table></div>` : ''}
-      <div class="key-read"><div class="key-title">Forecast to End</div><p class="key-p">Where the campaign is likely to finish if it carries on at its average weekly pace so far, compared with the estimate.</p>${statusHtml}</div>
+      <div class="key-read"><div class="key-title">Forecast to End</div><p class="key-p">${FORECAST_NOTE}</p>${statusHtml}</div>
     </div>
   </div>`;
 }
@@ -2627,7 +2679,7 @@ async function exportPDF(){
   // Where each tab / "?" button sits inside the page it is drawn on (measured in the capture copy, which is
   // exactly what gets photographed), so a clickable area can be laid over it in the PDF.
   const linkMap = {}, baseW = {};
-  const snap = (el)=> window.html2canvas(el, {scale:2, backgroundColor:'#ffffff', useCORS:true,
+  const snap = (el)=> window.html2canvas(el, {scale:2, backgroundColor:'#ffffff', useCORS:true, windowWidth:1700,
     onclone:(cloned)=>{
       const r = cloned.getElementById('report-root'); if(r) r.classList.add('rp-export');
       if(cloned.body) cloned.body.classList.add('rp-exporting');
@@ -2640,13 +2692,13 @@ async function exportPDF(){
       }
     }});
   const nWeekly = document.querySelectorAll('#rp-export-pages .rp-wkpage').length;
-  const pageFor = { overview:1, weekly:2, key: keyEl ? 2 + nWeekly : null };
+  const pageFor = { overview:1, weekly: nWeekly ? 2 : null, key: keyEl ? 2 + nWeekly : null };
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'a4'});
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const margin = 24;
+  const margin = 18;
   const usableW = pageW - margin*2;
   const usableH = pageH - margin*2;
   let first = true;
@@ -2658,13 +2710,13 @@ async function exportPDF(){
       // One page each, never sliced: fit to the page width, or shrink to fit the height.
       let w = usableW, h = (canvas.height * w) / canvas.width;
       if(h > usableH){ h = usableH; w = (canvas.width * h) / canvas.height; }
-      const x0 = margin + (usableW - w)/2;
-      doc.addImage(canvas.toDataURL('image/png'), 'PNG', x0, margin, w, h);
+      const x0 = margin + (usableW - w)/2, y0 = margin + (usableH - h)/2;   // centred, so no band of empty page at one end
+      doc.addImage(canvas.toDataURL('image/png'), 'PNG', x0, y0, w, h);
       // Clickable areas over the tabs and ? buttons (a little larger than the button itself, so they are easy to hit).
       const f = baseW[el.id] ? w / baseW[el.id] : 0, pad = 4;
       if(f) (linkMap[el.id]||[]).forEach(L=>{
         const pg = pageFor[L.to];
-        if(pg) doc.link(x0 + (L.x - pad)*f, margin + (L.y - pad)*f, (L.w + pad*2)*f, (L.h + pad*2)*f, {pageNumber: pg});
+        if(pg) doc.link(x0 + (L.x - pad)*f, y0 + (L.y - pad)*f, (L.w + pad*2)*f, (L.h + pad*2)*f, {pageNumber: pg});
       });
     }
   }catch(e){ showToast('Could not generate PDF'); return; }
