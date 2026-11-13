@@ -1709,7 +1709,7 @@ function renderAdmin(){
   return `<div class="wrap-narrow">
     <div class="section-title">This version</div>
     <div class="admin-card">
-      <p style="margin:0 0 8px;"><strong>${APP_VERSION}</strong> (11 Nov 2026)</p>
+      <p style="margin:0 0 8px;"><strong>${APP_VERSION}</strong> (13 Nov 2026)</p>
       <p class="subtle" style="margin:0;">To check you have the latest: open a campaign's report. Every measure should have a small <strong>?</strong> you can hover over or click, the funnel bars should be solid colours, and the header should be plain savi green. If not, replace the file in GitHub with the latest download, then refresh this page with Ctrl+F5 (Cmd+Shift+R on a Mac).</p>
     </div>
     <div class="section-title">Data &amp; backup</div>
@@ -2239,11 +2239,11 @@ function forecastFor(c, m, recorded, totalWeeks){
   const cumul = cumFor(c, m.id);
   return cumul + (cumul/recorded)*(totalWeeks-recorded);
 }
-// Headline cards: the first four of these that are on the report (the Blue Light Card set is App Codes
-// Issued, Rewards Redeemed and the two conversion rates). Easy to make configurable later.
-const APP_VERSION = 'build 2026-11-11.7';
+// Headline cards: the first four of these that are on the report (the Blue Light Card set follows the journey:
+// App Codes Issued, Rewards Issued, Rewards Redeemed and Issued → Redemption). Easy to make configurable later.
+const APP_VERSION = 'build 2026-11-13.1';
 const KPI_PREFS = {
-  bluelight:    ['app_codes','red','itr','atr','issued','act','app_views','redval','visits'],
+  bluelight:    ['app_codes','issued','red','itr','act','app_views','redval','visits'],
   intermediate: ['issued','red','itr','atr','act','redval','visits'],
   advanced:     ['rew_iss','rew_red','itr','atr','rew_act','redval','visits'],
   basic:        ['act','red','redval','atr'],
